@@ -24,8 +24,9 @@ For each prompt received from the user:
    - All user answers to Junie's questions
    - Continue documenting until the prompt response is fully completed
 
-3. **Automatic Git Commit**:
-   - Upon completion of the prompt response, automatically create a git commit
+3. **Git Commit Requirement**:
+   - Upon completion of the prompt response, you MUST explicitly create a git commit
+   - This is not automatic - you must execute the git commands yourself
    - Commit message should include:
      - Title: Brief description of what was accomplished
      - Description: More detailed explanation of changes/actions taken
@@ -55,9 +56,13 @@ When initializing new git repositories:
 For each user prompt:
 1. Process and complete the user's request
 2. Create `AI_Interactions/YYYY-MM-DD_HH-mm_Summary.md` with full interaction log
-3. Execute `git add` for new/modified files
-4. Execute `git commit` with descriptive title and message
-5. Ensure commit includes both the interaction log and any work artifacts
+3. Create `AI_Interactions/YYYY-MM-DD_HH-mm_Summary_TERMINAL.md` with all terminal commands and outputs
+4. Verify files need committing: Execute `git status` to confirm new/modified files
+5. Stage files: Execute `git add` for the interaction log files and any work artifacts
+6. Verify staging: Execute `git status` again to confirm files are staged
+7. Commit: Execute `git commit` with descriptive title and detailed message
+8. Verify commit: Check that commit succeeded (look for commit SHA in output)
+9. Ensure commit includes both the interaction log files and any work artifacts
 
 ## File Naming Guidelines
 
