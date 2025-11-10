@@ -4,9 +4,10 @@ open System
 open System.Text.Json
 open FnMCP.IvanTheGeek.Types
 open FnMCP.IvanTheGeek.ContentProvider
+open FnMCP.IvanTheGeek.Tools
 
 // MCP Server implementation with JSON-RPC message handling
-type McpServer(provider: IContentProvider) =
+type McpServer(provider: IContentProvider, contextLibraryPath: string) =
 
     member _.HandleInitialize(request: InitializeRequest) = async {
         return {
@@ -36,8 +37,8 @@ type McpServer(provider: IContentProvider) =
     }
 
     member _.HandleListTools() = async {
-        // Placeholder for future tools implementation
-        return { Tools = [] }
+        let tools = Tools.getTools contextLibraryPath
+        return { Tools = tools }
     }
 
     member _.HandleListPrompts() = async {
@@ -84,6 +85,34 @@ type McpServer(provider: IContentProvider) =
             | "prompts/list" ->
                 let! response = this.HandleListPrompts()
                 return Ok (box response)
+
+            | "tools/call" ->
+                match jsonRpcRequest.Params with
+                | Some parameters ->
+                    let jsonElement = parameters :?> JsonElement
+                    let name = jsonElement.GetProperty("name").GetString()
+                    let arguments = 
+                        if jsonElement.TryGetProperty("arguments").IsSome then
+                            Some (box (jsonElement.GetProperty("arguments")))
+                        else
+                            None
+                    
+                    match Tools.executeTool contextLibraryPath name arguments with
+                    | Ok content ->
+                        let response = { Content = content }
+                        return Ok (box response)
+                    | Error err ->
+                        return Error {
+                            Code = ErrorCodes.InternalError
+                            Message = err
+                            Data = None
+                        }
+                | None ->
+                    return Error {
+                        Code = ErrorCodes.InvalidParams
+                        Message = "Missing tool call parameters"
+                        Data = None
+                    }
 
             | _ ->
                 return Error {

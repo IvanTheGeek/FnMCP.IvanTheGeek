@@ -107,7 +107,7 @@ let main argv =
 
         // Create provider and server
         let provider = FileSystemProvider(contextLibraryPath) :> IContentProvider
-        let server = McpServer(provider)
+        let server = McpServer(provider, contextLibraryPath)
 
         log "Server initialized. Ready to receive JSON-RPC requests on stdin."
         log "Logging to stderr. JSON-RPC responses on stdout."
