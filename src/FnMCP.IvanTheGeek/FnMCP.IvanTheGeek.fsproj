@@ -6,7 +6,19 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="Types.fs" />
+        <Compile Include="ContentProvider.fs" />
+        <Compile Include="FileSystemProvider.fs" />
+        <Compile Include="Resources.fs" />
+        <Compile Include="Tools.fs" />
+        <Compile Include="Prompts.fs" />
+        <Compile Include="McpServer.fs" />
         <Compile Include="Program.fs"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Expecto" Version="10.2.3" />
+      <PackageReference Include="System.Text.Json" Version="10.0.0-rc.2.25502.107" />
     </ItemGroup>
 
 </Project>
