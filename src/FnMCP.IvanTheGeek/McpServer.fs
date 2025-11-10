@@ -91,9 +91,10 @@ type McpServer(provider: IContentProvider, contextLibraryPath: string) =
                 | Some parameters ->
                     let jsonElement = parameters :?> JsonElement
                     let name = jsonElement.GetProperty("name").GetString()
+                    let mutable argsProp = Unchecked.defaultof<JsonElement>
                     let arguments = 
-                        if jsonElement.TryGetProperty("arguments").IsSome then
-                            Some (box (jsonElement.GetProperty("arguments")))
+                        if jsonElement.TryGetProperty("arguments", &argsProp) then
+                            Some (box argsProp)
                         else
                             None
                     

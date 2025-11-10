@@ -25,8 +25,8 @@ let getTools (contextLibraryPath: string) : Tool list =
                     mode = {|
                         ``type`` = "string"
                         description = "Update mode: 'overwrite' (replace entire file) or 'append' (add to end)"
-                        enum = [| "overwrite"; "append" |]
-                        default = "overwrite"
+                        ``enum`` = [| "overwrite"; "append" |]
+                        ``default`` = "overwrite"
                     |}
                 |}
                 required = [| "path"; "content" |]
