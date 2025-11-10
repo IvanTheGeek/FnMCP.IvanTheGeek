@@ -97,7 +97,7 @@ let main argv =
                 Path.Combine(projectRoot, "context-library")
 
         log "FnMCP.IvanTheGeek MCP Server starting..."
-        log $"Protocol version: 2025-06-18"
+        log $"Protocol version: 2024-11-05"
         log $"Context library path: {contextLibraryPath}"
 
         // Check if context library exists

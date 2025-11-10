@@ -10,7 +10,7 @@ type McpServer(provider: IContentProvider) =
 
     member _.HandleInitialize(request: InitializeRequest) = async {
         return {
-            ProtocolVersion = "2025-06-18"
+            ProtocolVersion = "2024-11-05"
             Capabilities = box {| resources = {| listChanged = false |} |}
             ServerInfo = box {|
                 name = "FnMCP.IvanTheGeek"
@@ -52,7 +52,7 @@ type McpServer(provider: IContentProvider) =
             | "initialize" ->
                 // Parse initialize request from params
                 let initRequest = {
-                    ProtocolVersion = "2025-06-18"
+                    ProtocolVersion = "2024-11-05"
                     Capabilities = box {||}
                     ClientInfo = box {||}
                 }
