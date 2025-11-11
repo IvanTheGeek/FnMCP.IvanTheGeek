@@ -2,6 +2,7 @@ module FnMCP.IvanTheGeek.Program
 
 open System
 open System.IO
+open System.Text
 open System.Text.Json
 open System.Text.Json.Serialization
 open FnMCP.IvanTheGeek.Types
@@ -19,32 +20,30 @@ jsonOptions.DefaultIgnoreCondition <- JsonIgnoreCondition.WhenWritingNull
 let log message =
     Console.Error.WriteLine($"[FnMCP.IvanTheGeek] {message}")
 
-// Process a single JSON-RPC request
-let processRequest (server: McpServer) (requestLine: string) = async {
+// Process a single JSON-RPC request (payload is a full JSON object string)
+let processRequest (server: McpServer) (payload: string) = async {
     // Try to extract ID from the raw JSON first, in case parsing fails
     let tryExtractId () =
         try
-            use doc = JsonDocument.Parse(requestLine)
+            use doc = JsonDocument.Parse(payload)
             let root = doc.RootElement
             let mutable idProp = Unchecked.defaultof<JsonElement>
             if root.TryGetProperty("id", &idProp) then
                 match idProp.ValueKind with
                 | JsonValueKind.String -> Some (box (idProp.GetString()))
-                | JsonValueKind.Number -> Some (box (idProp.GetInt32()))
+                | JsonValueKind.Number ->
+                    // support both int and long ids
+                    try Some (box (idProp.GetInt64())) with _ -> Some (box (idProp.GetInt32()))
                 | JsonValueKind.Null -> None
                 | _ -> None
-            else
-                None
-        with
-        | _ -> None
-    
+            else None
+        with _ -> None
+
     try
         // Parse JSON-RPC request
-        let jsonRpcRequest = JsonSerializer.Deserialize<JsonRpcRequest>(requestLine, jsonOptions)
-        
+        let jsonRpcRequest = JsonSerializer.Deserialize<JsonRpcRequest>(payload, jsonOptions)
         log $"Received request: {jsonRpcRequest.Method}"
-        
-        // Check if this is a notification (no id field)
+
         match jsonRpcRequest.Id with
         | None ->
             // Notifications don't get responses
@@ -57,14 +56,9 @@ let processRequest (server: McpServer) (requestLine: string) = async {
             let response = server.CreateResponse(jsonRpcRequest.Id, result)
             let responseJson = JsonSerializer.Serialize(response, jsonOptions)
             return Some responseJson
-        
-    with
-    | ex ->
+    with ex ->
         log $"Error processing request: {ex.Message}"
-        // Try to get the ID from the raw JSON
         let requestId = tryExtractId ()
-        
-        // Only return an error response if we have an ID (not a notification)
         match requestId with
         | Some id ->
             let errorResponse = {
@@ -79,9 +73,113 @@ let processRequest (server: McpServer) (requestLine: string) = async {
             }
             return Some (JsonSerializer.Serialize(errorResponse, jsonOptions))
         | None ->
-            // No ID means it was likely a notification or completely malformed
             log "No ID found in malformed request, skipping error response"
             return None
+}
+
+// Reader that supports JSON-RPC over stdio with Content-Length framing (LSP-style)
+// and falls back to NDJSON with multi-line support.
+let readNextMessage (sr: StreamReader) = async {
+    // Helper: read headers until blank line; returns map and true when headers were present
+    let! firstLine = sr.ReadLineAsync() |> Async.AwaitTask
+    if isNull firstLine then
+        return None
+    else
+        let lineTrim = firstLine.Trim()
+        let isHeaderStart = lineTrim.StartsWith("Content-Length", StringComparison.OrdinalIgnoreCase)
+                            || lineTrim.Contains(":")
+        if isHeaderStart && not (lineTrim.StartsWith("{") || lineTrim.StartsWith("[")) then
+            // Parse headers
+            let mutable contentLengthOpt: int option = None
+            let mutable line = firstLine
+            let mutable doneHeaders = false
+            let mutable headerBytes = 0
+            while not doneHeaders do
+                // Parse header line
+                let idx = line.IndexOf(':')
+                if idx > 0 then
+                    let key = line.Substring(0, idx).Trim()
+                    let value = line.Substring(idx + 1).Trim()
+                    if key.Equals("Content-Length", StringComparison.OrdinalIgnoreCase) then
+                        let ok, v = Int32.TryParse(value)
+                        if ok then contentLengthOpt <- Some v
+                // Read next header line
+                let! l = sr.ReadLineAsync() |> Async.AwaitTask
+                if isNull l || l.Length = 0 then doneHeaders <- true else line <- l
+            match contentLengthOpt with
+            | Some len when len >= 0 ->
+                // Read len characters (best effort; JSON typically ASCII). If fewer are read, continue until satisfied.
+                // Note: Content-Length is bytes; with UTF-8 ASCII this matches chars; for non-ASCII payloads this may slightly over-read/under-read.
+                let buffer = Array.zeroCreate<char> len
+                let mutable offset = 0
+                while offset < len do
+                    let! read = sr.ReadAsync(buffer, offset, len - offset) |> Async.AwaitTask
+                    if read = 0 then offset <- len else offset <- offset + read
+                let payload = new string(buffer, 0, len)
+                return Some payload
+            | _ ->
+                // No usable Content-Length; fall back to NDJSON accumulation starting with an empty line
+                let sb = StringBuilder()
+                let mutable depth = 0
+                let mutable inStr = false
+                let mutable esc = false
+                let mutable started = false
+                let rec readMore () = async {
+                    let! l = sr.ReadLineAsync() |> Async.AwaitTask
+                    if isNull l then return () else
+                    if not started then
+                        // look for start char in this line
+                        for ch in l do
+                            match ch with
+                            | '{' | '[' when not inStr -> depth <- depth + 1; started <- true
+                            | '}' | ']' when not inStr -> depth <- Math.Max(0, depth - 1)
+                            | '"' -> if not esc then inStr <- not inStr; esc <- false
+                            | '\\' -> esc <- not esc
+                            | _ -> esc <- false
+                            sb.Append(ch) |> ignore
+                        sb.Append('\n') |> ignore
+                    else
+                        for ch in l do
+                            match ch with
+                            | '"' -> if not esc then inStr <- not inStr; esc <- false
+                            | '\\' -> esc <- not esc
+                            | '{' | '[' when not inStr -> depth <- depth + 1; esc <- false
+                            | '}' | ']' when not inStr -> depth <- Math.Max(0, depth - 1); esc <- false
+                            | _ -> esc <- false
+                            sb.Append(ch) |> ignore
+                        sb.Append('\n') |> ignore
+                    if started && depth = 0 && not inStr then return () else return! readMore ()
+                }
+                do! readMore ()
+                return Some (sb.ToString())
+        else
+            // NDJSON or pretty-printed JSON starting immediately
+            let sb = StringBuilder()
+            let mutable depth = 0
+            let mutable inStr = false
+            let mutable esc = false
+            let addLine (l: string) =
+                for ch in l do
+                    match ch with
+                    | '"' -> if not esc then inStr <- not inStr; esc <- false
+                    | '\\' -> esc <- not esc
+                    | '{' | '[' when not inStr -> depth <- depth + 1; esc <- false
+                    | '}' | ']' when not inStr -> depth <- Math.Max(0, depth - 1); esc <- false
+                    | _ -> esc <- false
+                    sb.Append(ch) |> ignore
+                sb.Append('\n') |> ignore
+            addLine firstLine
+            // Continue reading until we've closed all braces/brackets and are not inside a string
+            let mutable doneReading = depth = 0 && not inStr
+            while not doneReading do
+                let! l = sr.ReadLineAsync() |> Async.AwaitTask
+                if isNull l then
+                    // EOF reached; stop with what we have (may be partial)
+                    doneReading <- true
+                else
+                    addLine l
+                    doneReading <- (depth = 0 && not inStr)
+            return Some (sb.ToString())
 }
 
 [<EntryPoint>]
@@ -100,7 +198,6 @@ let main argv =
         log $"Protocol version: 2024-11-05"
         log $"Context library path: {contextLibraryPath}"
 
-        // Check if context library exists
         if not (Directory.Exists(contextLibraryPath)) then
             log $"Warning: Context library directory does not exist: {contextLibraryPath}"
             log "Server will start but no resources will be available until the directory is created."
@@ -112,35 +209,26 @@ let main argv =
         log "Server initialized. Ready to receive JSON-RPC requests on stdin."
         log "Logging to stderr. JSON-RPC responses on stdout."
 
-        // Main message loop - read from stdin, write to stdout
-        let rec messageLoop () =
-            let line = Console.ReadLine()
-            if line <> null then
-                // Process request
-                let responseJson = processRequest server line |> Async.RunSynchronously
-                
-                // Write response to stdout (only if not a notification)
-                match responseJson with
+        use sr = new StreamReader(Console.OpenStandardInput(), Encoding.UTF8)
+        let rec loop () = async {
+            let! msgOpt = readNextMessage sr
+            match msgOpt with
+            | None ->
+                log "EOF received, shutting down."
+                return ()
+            | Some payload ->
+                let! responseJsonOpt = processRequest server payload
+                match responseJsonOpt with
                 | Some json ->
                     Console.WriteLine(json)
                     Console.Out.Flush()
-                | None ->
-                    // Notification - no response needed
-                    ()
-                
-                // Continue loop
-                messageLoop ()
-            else
-                log "EOF received, shutting down."
-
-        // Start the message loop
-        messageLoop ()
-
+                | None -> ()
+                return! loop ()
+        }
+        loop () |> Async.RunSynchronously
         log "Server shutting down."
-        0  // Exit code
-
-    with
-    | ex ->
+        0
+    with ex ->
         log $"Fatal error: {ex.Message}"
         log $"Stack trace: {ex.StackTrace}"
-        1  // Error exit code
+        1

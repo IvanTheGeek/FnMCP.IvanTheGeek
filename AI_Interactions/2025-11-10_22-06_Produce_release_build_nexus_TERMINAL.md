@@ -38,3 +38,39 @@ drwxrwxr-x  2 linux linux     4096 Nov 10 22:06 zh-Hant
 $ readlink -f bin/publish/nexus
 /home/linux/RiderProjects/FnMCP.IvanTheGeek/bin/publish/nexus
 ```
+
+
+### 4) Git status (pre-commit)
+```
+$ git status
+On branch master
+Your branch is ahead of 'origin/master' by 2 commits.
+  (use "git push" to publish your local commits)
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+        .output.txt
+        AI_Interactions/2025-11-10_22-06_Produce_release_build_nexus.md
+        AI_Interactions/2025-11-10_22-06_Produce_release_build_nexus_TERMINAL.md
+nothing added to commit but untracked files present (use "git add" to track)
+```
+
+### 5) Git add files
+```
+$ git add AI_Interactions/2025-11-10_22-06_Produce_release_build_nexus.md AI_Interactions/2025-11-10_22-06_Produce_release_build_nexus_TERMINAL.md .output.txt
+(no output)
+```
+
+### 6) Git commit
+```
+$ git commit -m "Build: Release publish with executable named 'nexus'; add AI_Interactions logs
+
+- Ran: dotnet publish -c Release -r linux-x64 --self-contained true -p:AssemblyName=nexus -o bin/publish
+- Verified binary path via readlink -f bin/publish/nexus
+- Added interaction log and terminal log capturing commands and outputs
+- Included .output.txt that contains the truncated ls output for reference"
+[master 071f200] Build: Release publish with executable named 'nexus'; add AI_Interactions logs
+ 3 files changed, 274 insertions(+)
+ create mode 100644 .output.txt
+ create mode 100644 AI_Interactions/2025-11-10_22-06_Produce_release_build_nexus.md
+ create mode 100644 AI_Interactions/2025-11-10_22-06_Produce_release_build_nexus_TERMINAL.md
+```
