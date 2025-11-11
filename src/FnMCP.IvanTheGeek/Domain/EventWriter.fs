@@ -21,8 +21,8 @@ module private Helpers =
     let monthFolder (dt: DateTime) = dt.ToString("yyyy-MM")
 
     let fileTimestamp (dt: DateTime) =
-        // Format: YYYY-MM-DDTHH-MM-SS (no colons)
-        dt.ToString("yyyy-MM-dd'T'HH-mm-ss")
+        // Format: YYYY-MM-DDTHH-MM-SSZ (UTC with Z suffix)
+        dt.ToUniversalTime().ToString("yyyy-MM-dd'T'HH-mm-ss") + "Z"
 
     let yamlEscape (s: string) =
         if isNull s then "" else s.Replace("\\", "\\\\").Replace("\"", "\\\"")
@@ -67,10 +67,11 @@ let eventDirectory (basePath: string) (dt: DateTime) =
     Path.Combine(basePath, "nexus", "events", "domain", "active", monthFolder dt)
 
 let buildFilename (etype: EventType) (title: string) (dt: DateTime) =
+    let guid = System.Guid.NewGuid().ToString("N").Substring(0, 8) // 8-char GUID suffix
     let ts = fileTimestamp dt
     let et = etype.AsString
     let name = sanitizeFilePart title
-    $"{ts}_{et}_{name}.md"
+    $"{ts}_{et}_{name}_{guid}.md"
 
 let writeEventFile (basePath: string) (meta: EventMeta) (body: string) =
     let dir = eventDirectory basePath meta.OccurredAt
@@ -90,11 +91,12 @@ module SystemEventHelpers =
     let systemEventDirectory (basePath: string) (dt: DateTime) =
         Path.Combine(basePath, "nexus", "events", "system", "active", Helpers.monthFolder dt)
 
-    // System event filename: timestamp_EventType.yaml
+    // System event filename: timestamp_EventType_guid.yaml
     let buildSystemFilename (etype: SystemEventType) (dt: DateTime) =
+        let guid = System.Guid.NewGuid().ToString("N").Substring(0, 8)
         let ts = Helpers.fileTimestamp dt
         let et = etype.AsString
-        $"{ts}_{et}.yaml"
+        $"{ts}_{et}_{guid}.yaml"
 
     // Convert system event to pure YAML (no markdown body)
     let toSystemYaml (meta: SystemEventMeta) =
@@ -151,16 +153,17 @@ module LearningEventHelpers =
     let learningEventDirectory (basePath: string) (dt: DateTime) =
         Path.Combine(basePath, "nexus", "events", "learning", "active", Helpers.monthFolder dt)
 
-    // Learning event filename: timestamp_EventType_PatternName.md
+    // Learning event filename: timestamp_EventType_PatternName_guid.md
     let buildLearningFilename (etype: LearningEventType) (patternName: string option) (dt: DateTime) =
+        let guid = System.Guid.NewGuid().ToString("N").Substring(0, 8)
         let ts = Helpers.fileTimestamp dt
         let et = etype.AsString
         match patternName with
         | Some name ->
             let sanitized = Helpers.sanitizeFilePart name
-            $"{ts}_{et}_{sanitized}.md"
+            $"{ts}_{et}_{sanitized}_{guid}.md"
         | None ->
-            $"{ts}_{et}.md"
+            $"{ts}_{et}_{guid}.md"
 
     // Convert learning event to YAML frontmatter
     let toLearningYaml (meta: LearningEventMeta) (body: string) =
