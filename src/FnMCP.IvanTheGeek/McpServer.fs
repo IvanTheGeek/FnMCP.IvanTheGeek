@@ -4,7 +4,7 @@ open System
 open System.Text.Json
 open FnMCP.IvanTheGeek.Types
 open FnMCP.IvanTheGeek.ContentProvider
-open FnMCP.IvanTheGeek.Tools
+open FnMCP.IvanTheGeek
 
 // MCP Server implementation with JSON-RPC message handling
 type McpServer(provider: IContentProvider, contextLibraryPath: string) =
@@ -37,7 +37,7 @@ type McpServer(provider: IContentProvider, contextLibraryPath: string) =
     }
 
     member _.HandleListTools() = async {
-        let tools = Tools.getTools contextLibraryPath
+        let tools = ToolRegistry.getTools contextLibraryPath
         return { Tools = tools }
     }
 
@@ -98,7 +98,7 @@ type McpServer(provider: IContentProvider, contextLibraryPath: string) =
                         else
                             None
                     
-                    match Tools.executeTool contextLibraryPath name arguments with
+                    match ToolRegistry.executeTool contextLibraryPath name arguments with
                     | Ok content ->
                         let response = { Content = content }
                         return Ok (box response)

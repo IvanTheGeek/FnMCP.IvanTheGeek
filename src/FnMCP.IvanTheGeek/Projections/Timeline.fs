@@ -1,0 +1,65 @@
+module FnMCP.IvanTheGeek.Projections.Timeline
+
+open System
+open System.IO
+open System.Text
+open FnMCP.IvanTheGeek.Domain
+open FnMCP.IvanTheGeek.Domain.Projections
+
+// Timeline projection: chronologically sorted events
+
+let readTimeline (basePath: string) : TimelineItem list =
+    let baseDir = Path.Combine(basePath, "nexus", "events", "domain", "active")
+    if not (Directory.Exists(baseDir)) then [] else
+    Directory.GetFiles(baseDir, "*.md", SearchOption.AllDirectories)
+    |> Array.choose (fun p -> tryParseEvent p |> Option.map id)
+    |> Array.sortBy (fun i -> i.OccurredAt)
+    |> Array.toList
+
+let generateEvolutionMarkdown (basePath: string) : string =
+    let timeline = readTimeline basePath
+    let sb = StringBuilder()
+
+    sb.AppendLine("# Nexus Evolution Timeline") |> ignore
+    sb.AppendLine() |> ignore
+    sb.AppendLine("**Generated:** " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")) |> ignore
+    sb.AppendLine() |> ignore
+    sb.AppendLine("This timeline shows the chronological evolution of the Nexus knowledge system through captured events.") |> ignore
+    sb.AppendLine() |> ignore
+
+    if List.isEmpty timeline then
+        sb.AppendLine("_No events recorded yet._") |> ignore
+    else
+        sb.AppendLine($"**Total Events:** {timeline.Length}") |> ignore
+        sb.AppendLine() |> ignore
+
+        // Group by month
+        let grouped = timeline |> List.groupBy (fun e -> e.OccurredAt.ToString("yyyy-MM"))
+
+        for (month, events) in grouped do
+            sb.AppendLine($"## {month}") |> ignore
+            sb.AppendLine() |> ignore
+
+            for event in events do
+                let date = event.OccurredAt.ToString("yyyy-MM-dd")
+                let time = event.OccurredAt.ToString("HH:mm")
+                sb.AppendLine($"### {date} {time} - {event.Title}") |> ignore
+                sb.AppendLine() |> ignore
+                sb.AppendLine($"**Type:** {event.Type}") |> ignore
+                sb.AppendLine() |> ignore
+                sb.AppendLine($"**File:** `{Path.GetFileName(event.Path)}`") |> ignore
+                sb.AppendLine() |> ignore
+
+            sb.AppendLine() |> ignore
+
+    sb.ToString()
+
+let writeEvolutionFile (basePath: string) : string =
+    let projectionDir = Path.Combine(basePath, "nexus", "projections", "timeline")
+    if not (Directory.Exists(projectionDir)) then
+        Directory.CreateDirectory(projectionDir) |> ignore
+
+    let content = generateEvolutionMarkdown basePath
+    let filePath = Path.Combine(projectionDir, "evolution.md")
+    File.WriteAllText(filePath, content, Encoding.UTF8)
+    filePath

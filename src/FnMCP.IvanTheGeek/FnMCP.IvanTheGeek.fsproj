@@ -6,14 +6,29 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <!-- Core types first -->
         <Compile Include="Types.fs" />
+
+        <!-- Domain layer -->
+        <Compile Include="Domain/Events.fs" />
+        <Compile Include="Domain/EventWriter.fs" />
+        <Compile Include="Domain/Projections.fs" />
+
+        <!-- Projections layer -->
+        <Compile Include="Projections/Timeline.fs" />
+
+        <!-- Tools layer -->
+        <Compile Include="Tools/EventTools.fs" />
+
+        <!-- Infrastructure -->
         <Compile Include="ContentProvider.fs" />
         <Compile Include="FileSystemProvider.fs" />
         <Compile Include="Resources.fs" />
-        <Compile Include="Events.fs" />
         <Compile Include="Tools.fs" />
         <Compile Include="Prompts.fs" />
         <Compile Include="McpServer.fs" />
+
+        <!-- Entry point last -->
         <Compile Include="Program.fs"/>
     </ItemGroup>
 
