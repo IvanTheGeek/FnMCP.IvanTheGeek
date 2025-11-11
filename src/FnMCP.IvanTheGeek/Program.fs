@@ -182,53 +182,145 @@ let readNextMessage (sr: StreamReader) = async {
             return Some (sb.ToString())
 }
 
+// CLI mode argument parser
+let parseCliArgs (args: string array) =
+    let rec parseArgs (remaining: string list) (acc: Map<string, obj>) =
+        match remaining with
+        | [] -> acc
+        | flag :: value :: rest when flag.StartsWith("--") ->
+            let key = flag.Substring(2).Replace("-", "_")  // Remove "--" and normalize hyphens to underscores
+            // Try to parse as JSON array/object, otherwise treat as string
+            let parsedValue =
+                if value.StartsWith("[") || value.StartsWith("{") then
+                    try
+                        let jsonElement = JsonSerializer.Deserialize<JsonElement>(value)
+                        box jsonElement
+                    with _ -> box value
+                else
+                    box value
+            parseArgs rest (Map.add key parsedValue acc)
+        | flag :: rest when flag.StartsWith("--") ->
+            // Flag without value - treat as true
+            let key = flag.Substring(2).Replace("-", "_")  // Normalize hyphens to underscores
+            parseArgs rest (Map.add key (box true) acc)
+        | unexpected :: rest ->
+            // Non-flag argument - skip or could error
+            parseArgs rest acc
+
+    parseArgs (Array.toList args) Map.empty
+
+// CLI mode execution
+let runCliMode (contextLibraryPath: string) (command: string) (args: string array) =
+    try
+        // Parse CLI arguments into map
+        let argsMap = parseCliArgs args
+
+        // Convert map to JsonElement for tool execution
+        let jsonString = JsonSerializer.Serialize(argsMap)
+        let jsonElement = JsonSerializer.Deserialize<JsonElement>(jsonString)
+
+        // Execute tool
+        match ToolRegistry.executeTool contextLibraryPath command (Some (box jsonElement)) with
+        | Ok content ->
+            // Print tool output - serialize to JSON then extract text
+            for item in content do
+                let itemJson = JsonSerializer.Serialize(item)
+                let itemElement = JsonSerializer.Deserialize<JsonElement>(itemJson)
+                let mutable textProp = Unchecked.defaultof<JsonElement>
+                if itemElement.TryGetProperty("text", &textProp) then
+                    Console.WriteLine(textProp.GetString())
+            0
+        | Error err ->
+            Console.Error.WriteLine($"Error: {err}")
+            1
+    with ex ->
+        Console.Error.WriteLine($"CLI Error: {ex.Message}")
+        Console.Error.WriteLine($"Stack trace: {ex.StackTrace}")
+        1
+
 [<EntryPoint>]
 let main argv =
     try
-        // Get context library path from config or argument
-        let contextLibraryPath = 
-            match argv with
-            | [| path |] -> path
-            | _ -> 
-                // Default to context-library relative to binary location
-                let projectRoot = Path.GetDirectoryName(AppContext.BaseDirectory)
-                Path.Combine(projectRoot, "context-library")
+        // Detect mode: CLI (2+ args) vs MCP (0-1 args)
+        match argv with
+        | args when args.Length >= 2 ->
+            // CLI Mode
+            let knownCommands = Set.ofList [
+                "create-event"; "create_event"
+                "timeline-projection"; "timeline_projection"
+                "enhance-nexus"; "enhance_nexus"
+                "record-learning"; "record_learning"
+                "lookup-pattern"; "lookup_pattern"
+                "lookup-error-solution"; "lookup_error_solution"
+                "update-documentation"; "update_documentation"
+            ]
 
-        log "FnMCP.IvanTheGeek MCP Server starting..."
-        log $"Protocol version: 2024-11-05"
-        log $"Context library path: {contextLibraryPath}"
+            // Determine if first arg is context path or command
+            let contextPath, command, remainingArgs =
+                if knownCommands.Contains(args.[0]) || knownCommands.Contains(args.[0].Replace("-", "_")) then
+                    // First arg is command, use default context path
+                    let projectRoot = Path.GetDirectoryName(AppContext.BaseDirectory)
+                    let defaultPath = Path.Combine(projectRoot, "context-library")
+                    let cmd = args.[0].Replace("-", "_")  // Normalize to underscore
+                    defaultPath, cmd, args.[1..]
+                else
+                    // First arg is context path, second is command
+                    let cmd = if args.Length > 1 then args.[1].Replace("-", "_") else ""
+                    args.[0], cmd, if args.Length > 2 then args.[2..] else [||]
 
-        if not (Directory.Exists(contextLibraryPath)) then
-            log $"Warning: Context library directory does not exist: {contextLibraryPath}"
-            log "Server will start but no resources will be available until the directory is created."
+            if String.IsNullOrEmpty(command) then
+                Console.Error.WriteLine("Error: No command specified")
+                Console.Error.WriteLine("Usage: nexus [context-path] <command> [--arg value ...]")
+                Console.Error.WriteLine("Commands: create-event, timeline-projection, enhance-nexus, record-learning, lookup-pattern, lookup-error-solution, update-documentation")
+                1
+            else
+                runCliMode contextPath command remainingArgs
 
-        // Create provider and server
-        let provider = FileSystemProvider(contextLibraryPath) :> IContentProvider
-        let server = McpServer(provider, contextLibraryPath)
+        | _ ->
+            // MCP Server Mode
+            let contextLibraryPath =
+                match argv with
+                | [| path |] -> path
+                | _ ->
+                    // Default to context-library relative to binary location
+                    let projectRoot = Path.GetDirectoryName(AppContext.BaseDirectory)
+                    Path.Combine(projectRoot, "context-library")
 
-        log "Server initialized. Ready to receive JSON-RPC requests on stdin."
-        log "Logging to stderr. JSON-RPC responses on stdout."
+            log "FnMCP.IvanTheGeek MCP Server starting..."
+            log $"Protocol version: 2024-11-05"
+            log $"Context library path: {contextLibraryPath}"
 
-        use sr = new StreamReader(Console.OpenStandardInput(), Encoding.UTF8)
-        let rec loop () = async {
-            let! msgOpt = readNextMessage sr
-            match msgOpt with
-            | None ->
-                log "EOF received, shutting down."
-                return ()
-            | Some payload ->
-                let! responseJsonOpt = processRequest server payload
-                match responseJsonOpt with
-                | Some json ->
-                    Console.WriteLine(json)
-                    Console.Out.Flush()
-                | None -> ()
-                return! loop ()
-        }
-        loop () |> Async.RunSynchronously
-        log "Server shutting down."
-        0
+            if not (Directory.Exists(contextLibraryPath)) then
+                log $"Warning: Context library directory does not exist: {contextLibraryPath}"
+                log "Server will start but no resources will be available until the directory is created."
+
+            // Create provider and server
+            let provider = FileSystemProvider(contextLibraryPath) :> IContentProvider
+            let server = McpServer(provider, contextLibraryPath)
+
+            log "Server initialized. Ready to receive JSON-RPC requests on stdin."
+            log "Logging to stderr. JSON-RPC responses on stdout."
+
+            use sr = new StreamReader(Console.OpenStandardInput(), Encoding.UTF8)
+            let rec loop () = async {
+                let! msgOpt = readNextMessage sr
+                match msgOpt with
+                | None ->
+                    log "EOF received, shutting down."
+                    return ()
+                | Some payload ->
+                    let! responseJsonOpt = processRequest server payload
+                    match responseJsonOpt with
+                    | Some json ->
+                        Console.WriteLine(json)
+                        Console.Out.Flush()
+                    | None -> ()
+                    return! loop ()
+            }
+            loop () |> Async.RunSynchronously
+            log "Server shutting down."
+            0
     with ex ->
-        log $"Fatal error: {ex.Message}"
-        log $"Stack trace: {ex.StackTrace}"
+        Console.Error.WriteLine($"Fatal error: {ex.Message}")
+        Console.Error.WriteLine($"Stack trace: {ex.StackTrace}")
         1

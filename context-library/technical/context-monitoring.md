@@ -2,7 +2,7 @@
 
 **Framework:** FnMCP.IvanTheGeekDevFramework  
 **Purpose:** Display token usage after every Claude response  
-**Updated:** 2025-11-10  
+**Updated:** 2025-11-11  
 **Status:** Active - Required for all conversations
 
 ## The Pattern
@@ -30,7 +30,41 @@ Status Legend: ✓ Comfortable (0-75%) | ⚠ Moderate (75-85%) | 🔴 High (85%+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-### Components Explained
+## Visual Bar Calculation (CRITICAL)
+
+**20 characters total, each block = 5%**
+
+```python
+# CORRECT calculation
+total_tokens = 190000
+used_tokens = 85000
+percentage = (used_tokens / total_tokens) * 100  # 44.74%
+
+# Calculate filled blocks
+filled = int(percentage / 5)  # int(44.74 / 5) = int(8.948) = 8
+empty = 20 - filled           # 20 - 8 = 12
+
+bar = "█" * filled + "░" * empty
+# Result: "████████░░░░░░░░░░░░" (8 filled, 12 empty)
+```
+
+**Rounding:** Use `int()` to truncate (floor). Do NOT round up.
+
+**Common mistake:** Don't calculate `filled = (used_tokens / total_tokens) * 20` directly - this gives wrong results because you're not accounting for the percentage-to-blocks conversion.
+
+### Verification Examples
+
+| Used % | Blocks | Bar |
+|--------|--------|-----|
+| 5%     | 1      | `[█░░░░░░░░░░░░░░░░░░░]` |
+| 25%    | 5      | `[█████░░░░░░░░░░░░░░░]` |
+| 42.9%  | 8      | `[████████░░░░░░░░░░░░]` |
+| 50%    | 10     | `[██████████░░░░░░░░░░]` |
+| 75%    | 15     | `[███████████████░░░░░]` |
+| 90%    | 18     | `[██████████████████░░]` |
+| 100%   | 20     | `[████████████████████]` |
+
+## Components Explained
 
 **Visual Bar:**
 - 20 characters total
@@ -56,33 +90,12 @@ Status Legend: ✓ Comfortable (0-75%) | ⚠ Moderate (75-85%) | 🔴 High (85%+
 
 ### In Memory (Account-Level)
 User preference stored in Claude's memory system:
-> "Display token usage monitoring after every response with budget, breakdown, and status indicator using detailed format with visual bar"
+> "Display token usage after EVERY response: line separators (━), 20-char bar (█/░), tree allocation (├─), status legend (✓⚠🔴). See technical/context-monitoring.md"
 
 This ensures the pattern applies to **all conversations** (top-level and in projects).
 
 ### In Project Knowledge (Quick Start)
-Add this instruction to `framework-overview.md`:
-
-```markdown
----
-
-**Note to Claude:** Display token usage statistics with visual bar at the end of EVERY response to monitor context consumption and enable efficient knowledge management.
-```
-
-### Visual Bar Calculation
-
-```python
-total_tokens = 190000
-used_tokens = 85000
-percentage = (used_tokens / total_tokens) * 100
-
-# Calculate bar (20 chars total)
-filled = int(percentage / 5)  # Each block = 5%
-empty = 20 - filled
-
-bar = "█" * filled + "░" * empty
-# Result: "████████░░░░░░░░░░░░" (9 filled, 11 empty)
-```
+Framework overview includes complete format specification with calculation details.
 
 ## Why This Matters
 
@@ -135,6 +148,7 @@ Unexpected 30K token response?
 **Monitoring is working when:**
 - Appears after every response consistently
 - Shows accurate token counts
+- **Visual bar correctly represents percentage** (8 blocks for ~40%, not 16!)
 - Status indicators trigger at right thresholds
 - User can plan conversation flow effectively
 - Token optimizations are immediately visible
