@@ -1,0 +1,16 @@
+﻿projections:
+  - name: knowledge
+    path: context-library/nexus/projections/knowledge
+    type: Knowledge
+    last_regenerated: 2025-11-11T02:49:32.404-05:00
+    staleness: Fresh
+  - name: metrics
+    path: /home/linux/RiderProjects/FnMCP.IvanTheGeek/context-library/nexus/projections/metrics
+    type: Metrics
+    last_regenerated: 2025-11-11T02:36:15.345-05:00
+    staleness: Fresh
+  - name: timeline
+    path: /home/linux/RiderProjects/FnMCP.IvanTheGeek/context-library/nexus/projections/timeline
+    type: Timeline
+    last_regenerated: 2025-11-11T02:36:15.340-05:00
+    staleness: Fresh

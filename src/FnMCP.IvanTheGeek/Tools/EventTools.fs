@@ -124,8 +124,9 @@ module EventTools =
                     let consequences = getStringOpt args "consequences"
                     Some { Status = status; Decision = decision; Context = context; Consequences = consequences }
                 | _ -> None
+            let eventId = Guid.NewGuid()
             let meta : EventMeta = {
-                Id = Guid.NewGuid()
+                Id = eventId
                 Type = etype
                 Title = title
                 Summary = summary
@@ -136,13 +137,49 @@ module EventTools =
                 Technical = techDetails
             }
             let fullPath = writeEventFile basePath meta body
+
+            // PHASE 2: Emit EventCreated system event
+            let systemEvent : SystemEventMeta = {
+                Id = Guid.NewGuid()
+                Type = EventCreated
+                OccurredAt = DateTime.Now
+                EventId = Some eventId
+                EventType = Some etypeStr
+                ProjectionType = None
+                Duration = None
+                EventCount = None
+                Staleness = None
+                ToolName = None
+                Success = None
+            }
+            EventWriter.writeSystemEvent basePath systemEvent |> ignore
+
             Ok (sprintf "Event created: %s" (System.IO.Path.GetRelativePath(basePath, fullPath)))
         with
         | ex -> Error ($"Failed to create event: {ex.Message}")
 
     let handleTimelineProjection (basePath: string) : Result<string, string> =
         try
+            let startTime = DateTime.Now
             let items = readTimeline basePath
+
+            // PHASE 2: Emit ProjectionQueried system event
+            let duration = DateTime.Now - startTime
+            let systemEvent : SystemEventMeta = {
+                Id = Guid.NewGuid()
+                Type = ProjectionQueried
+                OccurredAt = DateTime.Now
+                EventId = None
+                EventType = None
+                ProjectionType = Some ProjectionType.Timeline
+                Duration = Some duration
+                EventCount = Some items.Length
+                Staleness = None
+                ToolName = None
+                Success = None
+            }
+            EventWriter.writeSystemEvent basePath systemEvent |> ignore
+
             if List.isEmpty items then Ok "No events found."
             else
                 let sb = StringBuilder()

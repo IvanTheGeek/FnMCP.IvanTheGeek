@@ -63,3 +63,50 @@ let writeEvolutionFile (basePath: string) : string =
     let filePath = Path.Combine(projectionDir, "evolution.md")
     File.WriteAllText(filePath, content, Encoding.UTF8)
     filePath
+
+// ============================================================================
+// PHASE 2: Regenerate with system events and metadata
+// ============================================================================
+
+let regenerateTimeline (basePath: string) : string =
+    let startTime = DateTime.Now
+    let timeline = readTimeline basePath
+    let outputPath = writeEvolutionFile basePath
+    let duration = DateTime.Now - startTime
+
+    // Emit ProjectionRegenerated system event
+    let systemEvent : SystemEventMeta = {
+        Id = Guid.NewGuid()
+        Type = ProjectionRegenerated
+        OccurredAt = DateTime.Now
+        EventId = None
+        EventType = None
+        ProjectionType = Some ProjectionType.Timeline
+        Duration = Some duration
+        EventCount = Some timeline.Length
+        Staleness = None
+        ToolName = None
+        Success = None
+    }
+    EventWriter.writeSystemEvent basePath systemEvent |> ignore
+
+    // Update projection registry
+    let registryEntry = {
+        Registry.Name = "timeline"
+        Registry.Path = Path.GetDirectoryName(outputPath)
+        Registry.Type = ProjectionType.Timeline
+        Registry.LastRegenerated = DateTime.Now
+        Registry.Staleness = Fresh
+    }
+    Registry.RegistryIO.updateProjection basePath registryEntry
+
+    // Write .meta.yaml
+    let meta : ProjectionMeta = {
+        ProjectionType = ProjectionType.Timeline
+        LastRegenerated = DateTime.Now
+        SourceEventCount = timeline.Length
+        Staleness = Fresh
+    }
+    ProjectionMetadata.writeMetaFile (Path.GetDirectoryName(outputPath)) meta
+
+    outputPath

@@ -37,6 +37,10 @@ module ToolRegistry =
             };
             EventTools.createEventTool;
             EventTools.timelineProjectionTool;
+            EnhanceNexus.enhanceNexusTool;
+            Learning.recordLearningTool;
+            Learning.lookupPatternTool;
+            Learning.lookupErrorSolutionTool;
         ]
 
     // Tool execution handlers
@@ -97,6 +101,29 @@ module ToolRegistry =
                 | Error err -> Error err
             | "timeline_projection" ->
                 match EventTools.handleTimelineProjection contextLibraryPath with
+                | Ok txt -> Ok [ box {| ``type`` = "text"; text = txt |} ]
+                | Error err -> Error err
+            | "enhance_nexus" ->
+                let result = EnhanceNexus.handleEnhanceNexus contextLibraryPath jsonElement
+                let success = result["success"] :?> bool
+                if success then
+                    let eventsCreated = result["events_created"] :?> int
+                    let projectionsRegenerated = result["projections_regenerated"] :?> string list
+                    let projList = String.Join(", ", projectionsRegenerated)
+                    let message = $"✓ Enhanced Nexus: Created {eventsCreated} events, regenerated {projectionsRegenerated.Length} projections: {projList}"
+                    Ok [ box {| ``type`` = "text"; text = message |} ]
+                else
+                    Error (result["error"] :?> string)
+            | "record_learning" ->
+                match Learning.handleRecordLearning contextLibraryPath jsonElement with
+                | Ok message -> Ok [ box {| ``type`` = "text"; text = message |} ]
+                | Error err -> Error err
+            | "lookup_pattern" ->
+                match Learning.handleLookupPattern contextLibraryPath jsonElement with
+                | Ok txt -> Ok [ box {| ``type`` = "text"; text = txt |} ]
+                | Error err -> Error err
+            | "lookup_error_solution" ->
+                match Learning.handleLookupErrorSolution contextLibraryPath jsonElement with
                 | Ok txt -> Ok [ box {| ``type`` = "text"; text = txt |} ]
                 | Error err -> Error err
             | _ -> Error $"Unknown tool: {name}"

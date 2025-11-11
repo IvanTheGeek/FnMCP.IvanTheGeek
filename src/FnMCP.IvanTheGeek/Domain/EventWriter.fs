@@ -80,3 +80,138 @@ let writeEventFile (basePath: string) (meta: EventMeta) (body: string) =
     let yaml = toYaml meta body
     File.WriteAllText(fullPath, yaml, Encoding.UTF8)
     fullPath
+
+// ============================================================================
+// PHASE 2: System Event Writing - YAML only, no markdown body
+// ============================================================================
+
+module SystemEventHelpers =
+    // System events go to different directory structure
+    let systemEventDirectory (basePath: string) (dt: DateTime) =
+        Path.Combine(basePath, "nexus", "events", "system", "active", Helpers.monthFolder dt)
+
+    // System event filename: timestamp_EventType.yaml
+    let buildSystemFilename (etype: SystemEventType) (dt: DateTime) =
+        let ts = Helpers.fileTimestamp dt
+        let et = etype.AsString
+        $"{ts}_{et}.yaml"
+
+    // Convert system event to pure YAML (no markdown body)
+    let toSystemYaml (meta: SystemEventMeta) =
+        let b = StringBuilder()
+        let append (s: string) = b.AppendLine(s) |> ignore
+
+        append "---"
+        append ($"id: {meta.Id}")
+        append ($"type: {meta.Type.AsString}")
+
+        // ISO 8601 timestamp
+        let occurred = meta.OccurredAt.ToString("yyyy-MM-dd'T'HH:mm:ss.fffK")
+        append ($"occurred_at: {occurred}")
+
+        // Conditional fields based on event type
+        match meta.Type with
+        | EventCreated ->
+            meta.EventId |> Option.iter (fun id -> append ($"event_id: {id}"))
+            meta.EventType |> Option.iter (fun et -> append ($"event_type: {et}"))
+
+        | ProjectionRegenerated ->
+            meta.ProjectionType |> Option.iter (fun pt -> append ($"projection_type: {pt.AsString}"))
+            meta.Duration |> Option.iter (fun d -> append ($"duration_ms: {d.TotalMilliseconds}"))
+            meta.EventCount |> Option.iter (fun c -> append ($"event_count: {c}"))
+
+        | ProjectionQueried ->
+            meta.ProjectionType |> Option.iter (fun pt -> append ($"projection_type: {pt.AsString}"))
+            meta.Staleness |> Option.iter (fun s -> append ($"staleness: {s.AsString}"))
+
+        | ToolInvoked ->
+            meta.ToolName |> Option.iter (fun tn -> append ($"tool_name: {tn}"))
+            meta.Success |> Option.iter (fun s -> append ($"success: {s}"))
+
+        b.ToString()
+
+open SystemEventHelpers
+
+// Write system event (YAML only, no body)
+let writeSystemEvent (basePath: string) (meta: SystemEventMeta) : string =
+    let dir = systemEventDirectory basePath meta.OccurredAt
+    ensureDirectory dir
+    let filename = buildSystemFilename meta.Type meta.OccurredAt
+    let fullPath = Path.Combine(dir, filename)
+    let yaml = toSystemYaml meta
+    File.WriteAllText(fullPath, yaml, Encoding.UTF8)
+    fullPath
+
+// ============================================================================
+// PHASE 3: Learning Event Writing - YAML frontmatter + markdown body with code
+// ============================================================================
+
+module LearningEventHelpers =
+    // Learning events go to learning directory
+    let learningEventDirectory (basePath: string) (dt: DateTime) =
+        Path.Combine(basePath, "nexus", "events", "learning", "active", Helpers.monthFolder dt)
+
+    // Learning event filename: timestamp_EventType_PatternName.md
+    let buildLearningFilename (etype: LearningEventType) (patternName: string option) (dt: DateTime) =
+        let ts = Helpers.fileTimestamp dt
+        let et = etype.AsString
+        match patternName with
+        | Some name ->
+            let sanitized = Helpers.sanitizeFilePart name
+            $"{ts}_{et}_{sanitized}.md"
+        | None ->
+            $"{ts}_{et}.md"
+
+    // Convert learning event to YAML frontmatter
+    let toLearningYaml (meta: LearningEventMeta) (body: string) =
+        let b = StringBuilder()
+        let append (s: string) = b.AppendLine(s) |> ignore
+
+        append "---"
+        append ($"id: {meta.Id}")
+        append ($"type: {meta.Type.AsString}")
+        append ($"title: \"{Helpers.yamlEscape meta.Title}\"")
+        meta.Summary |> Option.iter (fun s -> append ($"summary: \"{Helpers.yamlEscape s}\""))
+
+        let occurred = meta.OccurredAt.ToString("yyyy-MM-dd'T'HH:mm:ss.fffK")
+        append ($"occurred_at: {occurred}")
+
+        if meta.Tags |> List.isEmpty |> not then
+            append "tags:"
+            for t in meta.Tags do append ($"  - {t}")
+
+        // Error-specific fields
+        meta.ErrorCode |> Option.iter (fun ec -> append ($"error_code: {ec}"))
+        meta.ErrorMessage |> Option.iter (fun em -> append ($"error_message: \"{Helpers.yamlEscape em}\""))
+
+        // Pattern-specific fields
+        meta.PatternName |> Option.iter (fun pn -> append ($"pattern_name: {pn}"))
+        meta.PatternCategory |> Option.iter (fun pc -> append ($"pattern_category: {pc.AsString}"))
+        meta.UseCount |> Option.iter (fun uc -> append ($"use_count: {uc}"))
+        meta.SuccessRate |> Option.iter (fun sr -> append ($"success_rate: {sr}"))
+
+        // Context fields
+        meta.FilePath |> Option.iter (fun fp -> append ($"file_path: \"{Helpers.yamlEscape fp}\""))
+        meta.ConversationContext |> Option.iter (fun cc -> append ($"conversation_context: \"{Helpers.yamlEscape cc}\""))
+
+        if meta.RelatedPatterns |> List.isEmpty |> not then
+            append "related_patterns:"
+            for rp in meta.RelatedPatterns do append ($"  - {rp}")
+
+        append "---"
+        append ""
+        append body
+
+        b.ToString()
+
+open LearningEventHelpers
+
+// Write learning event (YAML frontmatter + markdown body)
+let writeLearningEvent (basePath: string) (meta: LearningEventMeta) (body: string) : string =
+    let dir = learningEventDirectory basePath meta.OccurredAt
+    ensureDirectory dir
+    let filename = buildLearningFilename meta.Type meta.PatternName meta.OccurredAt
+    let fullPath = Path.Combine(dir, filename)
+    let content = toLearningYaml meta body
+    File.WriteAllText(fullPath, content, Encoding.UTF8)
+    fullPath

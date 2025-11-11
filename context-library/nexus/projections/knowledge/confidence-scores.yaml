@@ -1,0 +1,22 @@
+﻿---
+generated_at: 2025-11-11T02:49:32.398-05:00
+patterns:
+  - name: interpolated-string-variable-extraction
+    category: Syntax
+    confidence: 1
+    use_count: 8
+    success_count: 8
+    failure_count: 0
+    last_validated: 2025-11-11T02:49:32.372-05:00
+  - name: percent-sign-escaping
+    category: Syntax
+    confidence: 1
+    use_count: 2
+    success_count: 2
+    failure_count: 0
+    last_validated: 2025-11-11T02:49:32.372-05:00
+
+errors:
+  - code: FS3373
+    occurrences: 2
+    success_rate: 0.5

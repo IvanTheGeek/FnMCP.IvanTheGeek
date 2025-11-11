@@ -15,10 +15,15 @@
         <Compile Include="Domain/Projections.fs" />
 
         <!-- Projections layer -->
+        <Compile Include="Projections/Registry.fs" />
+        <Compile Include="Projections/Metrics.fs" />
+        <Compile Include="Projections/Knowledge.fs" />
         <Compile Include="Projections/Timeline.fs" />
 
         <!-- Tools layer -->
         <Compile Include="Tools/EventTools.fs" />
+        <Compile Include="Tools/EnhanceNexus.fs" />
+        <Compile Include="Tools/Learning.fs" />
 
         <!-- Infrastructure -->
         <Compile Include="ContentProvider.fs" />
