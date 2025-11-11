@@ -10,6 +10,7 @@
         <Compile Include="ContentProvider.fs" />
         <Compile Include="FileSystemProvider.fs" />
         <Compile Include="Resources.fs" />
+        <Compile Include="Events.fs" />
         <Compile Include="Tools.fs" />
         <Compile Include="Prompts.fs" />
         <Compile Include="McpServer.fs" />

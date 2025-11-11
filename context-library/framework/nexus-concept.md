@@ -1,46 +1,148 @@
-# Nexus: The Knowledge Hub
+# Nexus: The Integrated Development Context System
 
-**System:** FnMCP.IvanTheGeek MCP Server  
-**Nickname:** Nexus  
-**Purpose:** Central knowledge repository for framework documentation  
-**Updated:** 2025-01-15
+**Term:** Nexus  
+**Definition:** The complete integrated context system capturing methodology, knowledge, preferences, and philosophy  
+**Access Mechanism:** FnMCP.IvanTheGeek MCP Server  
+**Updated:** 2025-11-10
 
 ## What is Nexus?
 
-Nexus is the nickname for the FnMCP.IvanTheGeek MCP server and its associated context-library. It serves as the central knowledge hub that makes documentation available on-demand to Claude and other LLMs.
+**Nexus is not the MCP server** - it's the entire integrated context system that captures:
+- Your development methodology (Event Modeling, static-state design, paths)
+- Accumulated knowledge and decisions
+- Personal preferences and patterns
+- Philosophical approach to building software
+- The evolution of your thinking over time
 
-## Architecture
+**The MCP server is just the access mechanism** - the tool that makes Nexus available to LLMs. Nexus itself is the integrated whole: your externalized mental model for development.
 
-### The Two-Tier System
+## Why "Nexus"?
 
-**Tier 1: Quick Start (Always Loaded)**
-- Lives in Project Knowledge
-- Minimal essential context
-- ~2,000 tokens total
-- Provides framework awareness
+The name emphasizes **integration** - the point where everything connects:
+- Knowledge → Methodology → Tools → Philosophy
+- Personal experience → Community feedback → Framework evolution
+- Design → Implementation → Testing → Documentation
+- Past conversations → Current work → Future direction
 
-**Tier 2: Nexus (On-Demand)**
-- Served via MCP protocol
-- Detailed documentation
-- Fetched when needed
-- No token cost until accessed
+Short to type, captures the essence.
 
-### File System Layout
+## Current Architecture (Transitional)
+
+### Three-Layer System
+
+**Layer 1: Memory (Account-Level)**
+- Cross-project personal context
+- Claude's memory system (userMemories)
+- Personal preferences, general approach
+
+**Layer 2: Project Knowledge**
+- Quick-start essentials (~2K tokens)
+- Framework overview, current focus, naming conventions
+- Always loaded in conversations
+
+**Layer 3: MCP Context Library**
+- Detailed documentation served on-demand
+- INDEX.md provides discovery map
+- Only pay tokens for what you access
+
+**Token efficiency:** ~4.5K tokens upfront (70% savings vs old approach)
+
+See `framework/documentation-discovery.md` for details.
+
+## Future Architecture: Event-Sourced Nexus
+
+**The next evolution** - Event-source everything:
+
+### Core Concept
+
+**Events are the source of truth:**
 ```
-/home/linux/FnMCP.IvanTheGeek/
-├── context-library/        # The Nexus
-│   ├── quick-start/       # Tier 1 (copy to Project Knowledge)
-│   ├── framework/         # Tier 2 (MCP served)
-│   ├── apps/             # Tier 2 (MCP served)
-│   └── technical/        # Tier 2 (MCP served)
-└── FnMCP.IvanTheGeek.dll  # MCP server binary
+nexus/
+├── events/
+│   ├── domain/     # Your insights, decisions, learnings
+│   └── system/     # Operations, metrics, performance
+└── projections/
+    ├── current-docs/   # What MCP serves (generated)
+    ├── timeline/       # Journey chronicle (generated)
+    ├── metrics/        # Statistics (generated)
+    └── blog-posts/     # Content drafts (generated)
 ```
 
-## How Nexus Works
+**Everything becomes an event:**
+- Technical decisions → Events with narratives
+- Design iterations → Events with context
+- Learning moments → Events with stories
+- System operations → Events for metrics
 
-### Read-on-Request Pattern
+**Everything becomes a projection:**
+- Documentation → Generated from domain events
+- Metrics → Generated from system events
+- Blog posts → Generated from public events
+- Timeline → Generated from all events
+
+### Why Event Sourcing?
+
+**Never lose information:**
+- Traditional CRUD loses alternatives, context, journey
+- Even git loses "why" and intermediate reasoning
+- Event sourcing preserves complete history
+
+**Content infrastructure:**
+- One event stream
+- Infinite projections (docs, blog, forum, video, timeline)
+- Write authentic stories from real journey
+
+**Framework validation:**
+- Dogfooding at deepest level
+- Proves patterns before production apps
+- Foundation for LaundryLog, PerDiemLog
+
+**See `framework/event-sourced-nexus-architecture.md` for complete design.**
+
+## The "Enhance Nexus" Workflow
+
+**Current implementation:**
+1. Analyze conversation for insights
+2. Update Memory (cross-project preferences)
+3. Update MCP files (documentation)
+4. Regenerate INDEX.md
+5. Auto-commit with message
+6. Report summary
+
+**Future (event-sourced):**
+1. Analyze conversation for insights
+2. Create domain events (with narratives)
+3. Update Memory (if needed)
+4. Regenerate affected projections
+5. Auto-commit with message
+6. Report summary
+
+**Goal:** Token-efficient capture without manual work
+
+## Token Efficiency
+
+**Current approach:**
+- Memory: ~500 tokens
+- Quick Start: ~2,000 tokens
+- INDEX.md: ~2,000 tokens
+- On-demand docs: 0-20K tokens
+- **Total upfront: ~4,500 tokens**
+
+**Event-sourced approach:**
+- Memory: ~500 tokens
+- Quick Start: ~2,000 tokens
+- INDEX (projection): ~2,000 tokens
+- On-demand projections: 0-20K tokens
+- **Total upfront: ~4,500 tokens** (same!)
+
+**Difference:** What's behind the scenes
+- Current: Static files edited directly
+- Future: Projections generated from events
+
+## How Nexus Works Technically
+
+### Read-on-Request Pattern (Current)
 ```fsharp
-// No caching, always fresh
 let getResource uri = async {
     let path = uriToPath uri
     let! content = File.ReadAllTextAsync(path)
@@ -48,113 +150,104 @@ let getResource uri = async {
 }
 ```
 
-**Benefits:**
-- Always up-to-date
-- No restart needed
-- Simple implementation
-- Microsecond reads
-
-### Tool Access
-```yaml
-Tool: FnMCP.IvanTheGeek:update_documentation
-Purpose: Write documentation directly to Nexus
-Parameters:
-  - path: Relative path in context-library
-  - content: Markdown content
-  - mode: overwrite or append
+### Event-Sourced Pattern (Future)
+```fsharp
+let getProjection projType = async {
+    // Check if stale
+    let staleness = checkStaleness projType
+    
+    // Regenerate if needed
+    if isStale staleness then
+        do! regenerateFromEvents projType
+    
+    // Return cached projection
+    return! loadProjection projType
+}
 ```
 
-## Usage Patterns
+## MCP Server Components
 
-### For Claude/LLMs
+### Tools (Actions LLM Can Take)
 
-**Starting a conversation:**
-1. Quick Start loads automatically (2K tokens)
-2. Claude has framework awareness
-3. Detailed knowledge available on request
-4. Token usage stays minimal
+**Current:**
+- `update_documentation` - Edit files directly
 
-**Accessing detailed knowledge:**
-1. User asks specific question
-2. Claude identifies need for details
-3. MCP fetches relevant resource
-4. Information used in response
-5. Resource can be released
+**Future:**
+- `create_event` - Create domain/system events
+- `enhance_nexus` - High-level workflow
+- `regenerate_projection` - Force refresh
+- `query_events` - Search/filter events
 
-### For Developers
+### Resources (Content LLM Can Read)
 
-**Adding documentation:**
-1. Write markdown file
-2. Save to appropriate folder in context-library
-3. Immediately available (no restart)
-4. Claude can access in next query
+**Current:**
+- Documentation files from context-library
 
-**Updating documentation:**
-1. Edit file directly OR
-2. Ask Claude to update via MCP tool
-3. Changes instant
-4. No deployment needed
+**Future:**
+- Projections (docs, timeline, metrics)
+- Event streams (filtered access)
+- Projection status (staleness)
 
-## Why "Nexus"?
+### Prompts (Guided Workflows)
 
-The name represents:
-- **Connection point** between knowledge and LLMs
-- **Central hub** for all framework documentation  
-- **Neural nexus** - linking concepts together
-- **Next-generation** documentation system
+**Current:**
+- None defined
 
-## Benefits Achieved
+**Future:**
+- `enhance_nexus` - Multi-step workflow
+- `create_technical_decision` - Guided event creation
+- `document_design_iteration` - Capture evolution
 
-### Token Efficiency
-- 88% reduction in base token usage
-- From 15,000 to 2,000 tokens
-- More room for actual conversation
-- Details only when needed
+## Transition Strategy
 
-### Maintenance
-- Single source of truth
-- Version controlled (git)
-- Easy updates
-- No synchronization issues
+**Phase 1: Current (Working)**
+- CRUD documentation editing
+- INDEX.md for discovery
+- Hybrid projection caching design complete
 
-### Scalability
-- Add unlimited documentation
-- No Project Knowledge bloat
-- Organized by topic
-- Cross-references work
+**Phase 2: Hybrid Start**
+- Keep current docs as-is
+- Add events for NEW insights
+- Build first projection (timeline or metrics)
 
-## Future Vision
+**Phase 3: Gradual Migration**
+- Slowly convert docs to event-sourced
+- Validate projections working
+- Learn what works
 
-### Planned Enhancements
-- Semantic search across all docs
-- Auto-generated indexes
-- Usage analytics
-- Community contributions
-- Multi-project support
+**Phase 4: Full Event-Sourced**
+- All knowledge as events
+- Documentation as projection
+- Content strategy active
 
-### Integration Points
-- Penpot designs
-- Event Models
-- Test paths
-- Community forum
-- Generated code
+## Benefits
 
-## Best Practices
+**Current system:**
+- ✅ Token efficiency (70% savings)
+- ✅ On-demand loading
+- ✅ Always up-to-date
+- ❌ Loses information (CRUD)
+- ❌ Limited content reuse
 
-### Document Organization
-1. **Focused files** - One concept per file
-2. **Clear naming** - Descriptive paths
-3. **Cross-references** - Link related docs
-4. **Metadata headers** - Track updates
-5. **Size discipline** - 4-10KB target
+**Event-sourced system:**
+- ✅ Token efficiency (same)
+- ✅ On-demand loading
+- ✅ Always up-to-date
+- ✅ Never loses information
+- ✅ Content infrastructure
+- ✅ Framework validation
 
-### Content Guidelines
-1. **Start with overview** - What and why
-2. **Include examples** - Concrete over abstract
-3. **Show patterns** - Reusable solutions
-4. **Document decisions** - Why not just what
-5. **Keep current** - Update as you learn
+## Success Metrics
+
+**Nexus is working well when:**
+- Conversations feel informed by shared history
+- Insights captured without interrupting flow
+- Token usage comfortable (< 75%)
+- Evolution visible in git (current) or events (future)
+- Finding information instant
+- Updates happen automatically
+- No "holes or gaps" in knowledge
 
 ---
 
-*Nexus transforms documentation from a static burden into a dynamic, efficient knowledge system that scales with your framework.*
+*Nexus started as token optimization, evolved into integrated context, and will become narrative infrastructure through event sourcing - each step building on the last.*

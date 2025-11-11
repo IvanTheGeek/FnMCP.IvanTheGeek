@@ -24,6 +24,8 @@ Seven iterations of LaundryLog taught critical lessons: minimum 72px touch targe
 
 ## Key Concepts
 
+**Nexus:** The integrated development context system capturing methodology, knowledge, preferences, and philosophy. The MCP server is the access mechanism. See `framework/nexus-concept.md` for details.
+
 **Paths:** Inspired by Choose Your Own Adventure books, each path represents one complete execution trace through the system using concrete example data. Paths serve as narratives, test cases, documentation, and Penpot prototypes simultaneously.
 
 **Static-State Design:** Each screen represents exactly one state. No hidden modes or complex state machines. Navigation is explicit, validation is visual, and users always know where they are.
@@ -44,12 +46,12 @@ Seven iterations of LaundryLog taught critical lessons: minimum 72px touch targe
 
 ## Next Steps
 
-1. Populate context-library with modular documentation
-2. Implement LaundryLog using established patterns
-3. Complete PerDiemLog Phase 1 design
-4. Select and deploy interim forum solution
-5. Build EMapp prototype for Event Model visualization
+1. Implement LaundryLog using established patterns
+2. Complete PerDiemLog Phase 1 design
+3. Select and deploy interim forum solution
+4. Build EMapp prototype for Event Model visualization
+5. Continue enhancing Nexus with conversation insights
 
 ---
 
-**Note to Claude:** Always show context usage stats with visual bar at the end of responses to monitor token consumption and ensure efficient knowledge management.
+**Note to Claude:** Display detailed token usage statistics with visual bar at the end of EVERY response. Format must include: visual bar (█/░), exact counts, allocation breakdown (System/Knowledge/Conversation/Response), remaining tokens, and status indicator (✓/⚠/🔴). See `technical/context-monitoring.md` for complete specification.
