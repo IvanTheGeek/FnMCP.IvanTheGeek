@@ -1,8 +1,8 @@
 ﻿projections:
   - name: timeline
-    path: /home/linux/RiderProjects/FnMCP.IvanTheGeek/context-library/nexus/projections/timeline
+    path: /home/linux/FnMCP.Nexus/context-library/nexus/projections/timeline
     type: Timeline
-    last_regenerated: 2025-11-11T15:21:07.594-05:00
+    last_regenerated: 2025-11-12T09:05:37.678-05:00
     staleness: Fresh
   - name: metrics
     path: /home/linux/RiderProjects/FnMCP.IvanTheGeek/context-library/nexus/projections/metrics
