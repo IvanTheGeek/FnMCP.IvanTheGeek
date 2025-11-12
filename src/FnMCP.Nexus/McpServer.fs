@@ -1,6 +1,7 @@
 module FnMCP.Nexus.McpServer
 
 open System
+open System.Reflection
 open System.Text.Json
 open FnMCP.Nexus.Types
 open FnMCP.Nexus.ContentProvider
@@ -9,6 +10,18 @@ open FnMCP.Nexus.Prompts
 
 // MCP Server implementation with JSON-RPC message handling
 type McpServer(provider: IContentProvider, contextLibraryPath: string) =
+
+    // Resolve server version from assembly metadata so we don't hardcode it in code
+    let getServerVersion () =
+        try
+            let asm = Assembly.GetExecutingAssembly()
+            let infoAttr = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            if not (isNull infoAttr) && not (System.String.IsNullOrWhiteSpace(infoAttr.InformationalVersion)) then
+                infoAttr.InformationalVersion
+            else
+                let v = asm.GetName().Version
+                if isNull v then "0.0.0" else v.ToString()
+        with _ -> "0.0.0"
 
     member _.HandleInitialize(request: InitializeRequest) = async {
         return {
@@ -19,7 +32,7 @@ type McpServer(provider: IContentProvider, contextLibraryPath: string) =
             |}
             ServerInfo = box {|
                 name = "FnMCP.Nexus"
-                version = "0.2.0"
+                version = getServerVersion ()
             |}
         }
     }

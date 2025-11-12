@@ -1,10 +1,10 @@
-# FnMCP.IvanTheGeek
+# FnMCP.Nexus
 
-An MCP (Model Context Protocol) server implementation in F# that exposes context library documentation as resources.
+An MCP (Model Context Protocol) server implementation in F# that exposes a context library as resources and provides tools and projections.
 
 ## Overview
 
-This MCP server provides access to a context library containing documentation about applications and frameworks. It implements the MCP protocol version 2025-06-18 and communicates via JSON-RPC over stdio.
+This MCP server provides access to a context library containing documentation about applications and frameworks. It implements the MCP protocol version 2024-11-05 and communicates via JSON-RPC over stdio.
 
 ### Features
 
@@ -22,7 +22,7 @@ This MCP server provides access to a context library containing documentation ab
 ## Building the Server
 
 ```bash
-dotnet build src/FnMCP.IvanTheGeek/FnMCP.IvanTheGeek.fsproj
+dotnet build src/FnMCP.Nexus/FnMCP.Nexus.fsproj
 ```
 
 ## Running the Server
@@ -30,7 +30,7 @@ dotnet build src/FnMCP.IvanTheGeek/FnMCP.IvanTheGeek.fsproj
 The server accepts an optional command-line argument for the context library path:
 
 ```bash
-dotnet run --project src/FnMCP.IvanTheGeek [context-library-path]
+dotnet run --project src/FnMCP.Nexus [context-library-path]
 ```
 
 If no path is provided, it defaults to `context-library` in the project root.
@@ -44,12 +44,12 @@ The server is configured in `~/.config/Claude/claude_desktop_config.json` (Linux
 ```json
 {
   "mcpServers": {
-    "FnMCP.IvanTheGeek": {
+    "FnMCP.Nexus": {
       "command": "dotnet",
       "args": [
         "run",
         "--project",
-        "/home/linux/RiderProjects/FnMCP.IvanTheGeek/src/FnMCP.IvanTheGeek"
+        "/home/linux/RiderProjects/FnMCP.IvanTheGeek/src/FnMCP.Nexus"
       ],
       "env": {}
     }
@@ -85,15 +85,15 @@ Each markdown file becomes an MCP resource accessible via its URI path.
 
 ### Project Structure
 
-- `src/FnMCP.IvanTheGeek/` - Main source code
+- `src/FnMCP.Nexus/` - Main source code
   - `McpServer.fs` - Core MCP server implementation
   - `Program.fs` - Entry point and JSON-RPC message loop
   - `Types.fs` - MCP protocol types
   - `ContentProvider.fs` - Content provider interface
   - `FileSystemProvider.fs` - File system-based provider
   - `Resources.fs` - Resource management
-  - `Tools.fs` - Tools implementation (placeholder)
-  - `Prompts.fs` - Prompts implementation (placeholder)
+  - `Tools.fs` - Tool registry and handlers
+  - `Prompts.fs` - Prompt registry and handlers
 
 ### Requirements
 
@@ -102,7 +102,7 @@ Each markdown file becomes an MCP resource accessible via its URI path.
 
 ## Protocol Details
 
-The server implements MCP protocol version `2025-06-18` using JSON-RPC 2.0:
+The server implements MCP protocol version `2024-11-05` using JSON-RPC 2.0:
 - **Input**: JSON-RPC requests via stdin
 - **Output**: JSON-RPC responses via stdout
 - **Logging**: Diagnostic logs via stderr
