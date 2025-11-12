@@ -47,6 +47,54 @@ type TechnicalDecisionDetails = {
     Consequences: string option
 }
 
+type Priority =
+    | Consider
+    | Important
+    | Low
+with
+    member this.AsString =
+        match this with
+        | Consider -> "Consider"
+        | Important -> "Important"
+        | Low -> "Low"
+
+    static member Parse(str: string) =
+        match str.Trim().ToLowerInvariant() with
+        | "consider" -> Consider
+        | "important" -> Important
+        | "low" -> Low
+        | other -> failwith ($"Unknown priority: {other}")
+
+type IdeaStatus =
+    | Pending
+    | Exploring
+    | Implemented
+    | Rejected
+with
+    member this.AsString =
+        match this with
+        | Pending -> "Pending"
+        | Exploring -> "Exploring"
+        | Implemented -> "Implemented"
+        | Rejected -> "Rejected"
+
+    static member Parse(str: string) =
+        match str.Trim().ToLowerInvariant() with
+        | "pending" -> Pending
+        | "exploring" -> Exploring
+        | "implemented" -> Implemented
+        | "rejected" -> Rejected
+        | other -> failwith ($"Unknown idea status: {other}")
+
+type CrossProjectIdeaDetails = {
+    SourceProject: string
+    TargetProject: string
+    Idea: string
+    Priority: Priority
+    Status: IdeaStatus
+    ContextLink: string option
+}
+
 type EventMeta = {
     Id: Guid
     Type: EventType
@@ -57,6 +105,7 @@ type EventMeta = {
     Author: string option
     Links: string list
     Technical: TechnicalDecisionDetails option
+    CrossProjectIdea: CrossProjectIdeaDetails option
 }
 
 type TimelineItem = {

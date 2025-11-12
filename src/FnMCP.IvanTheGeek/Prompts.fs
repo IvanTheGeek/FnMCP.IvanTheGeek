@@ -5,6 +5,7 @@ open System.IO
 open FnMCP.IvanTheGeek.Types
 open FnMCP.IvanTheGeek.Domain
 open FnMCP.IvanTheGeek.Domain.Projections
+open FnMCP.IvanTheGeek.Projections.PendingIdeas
 
 // Define available prompts for each project
 let getPromptList () : Prompt list = [
@@ -46,6 +47,23 @@ let readLatestSessionState (basePath: string) (project: string) : TimelineItem o
 
 // Generate continuation context for a project
 let generateContinuationContext (basePath: string) (project: string) : string =
+    // Get pending ideas for this project
+    let pendingIdeas = readPendingIdeas basePath project
+    let ideasSection =
+        if List.isEmpty pendingIdeas then
+            ""
+        else
+            sprintf """
+
+## Pending Cross-Project Ideas (%d)
+
+You have ideas from other projects that might be relevant:
+
+%s
+"""
+                pendingIdeas.Length
+                (formatPendingIdeasSummary pendingIdeas)
+
     match readLatestSessionState basePath project with
     | Some sessionEvent ->
         // Read the actual event file to get the full content
@@ -62,7 +80,7 @@ let generateContinuationContext (basePath: string) (project: string) : string =
 
 ## Session Context
 
-%s
+%s%s
 
 ---
 
@@ -72,6 +90,7 @@ let generateContinuationContext (basePath: string) (project: string) : string =
             sessionEvent.Title
             (sessionEvent.OccurredAt.ToString("yyyy-MM-dd HH:mm"))
             content
+            ideasSection
     | None ->
         sprintf """# Start %s Session
 
@@ -81,13 +100,14 @@ No previous session found for this project.
 
 - Use MCP resources to read project documentation
 - Review recent events in the timeline
-- Check current project status
+- Check current project status%s
 
 ---
 
 *This is the first session for %s.*
 """
             (project.ToUpper())
+            ideasSection
             project
 
 // Handle prompts/get request

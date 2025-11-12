@@ -248,6 +248,7 @@ let main argv =
             let knownCommands = Set.ofList [
                 "create-event"; "create_event"
                 "timeline-projection"; "timeline_projection"
+                "capture-idea"; "capture_idea"
                 "enhance-nexus"; "enhance_nexus"
                 "record-learning"; "record_learning"
                 "lookup-pattern"; "lookup_pattern"

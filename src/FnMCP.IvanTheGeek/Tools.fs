@@ -37,6 +37,7 @@ module ToolRegistry =
             };
             EventTools.createEventTool;
             EventTools.timelineProjectionTool;
+            EventTools.captureIdeaTool;
             EnhanceNexus.enhanceNexusTool;
             Learning.recordLearningTool;
             Learning.lookupPatternTool;
@@ -102,6 +103,10 @@ module ToolRegistry =
             | "timeline_projection" ->
                 match EventTools.handleTimelineProjection contextLibraryPath with
                 | Ok txt -> Ok [ box {| ``type`` = "text"; text = txt |} ]
+                | Error err -> Error err
+            | "capture_idea" ->
+                match EventTools.handleCaptureIdea contextLibraryPath jsonElement with
+                | Ok message -> Ok [ box {| ``type`` = "text"; text = message |} ]
                 | Error err -> Error err
             | "enhance_nexus" ->
                 let result = EnhanceNexus.handleEnhanceNexus contextLibraryPath jsonElement

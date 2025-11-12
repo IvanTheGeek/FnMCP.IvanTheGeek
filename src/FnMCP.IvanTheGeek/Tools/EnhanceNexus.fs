@@ -113,6 +113,7 @@ let private createEventFromSpec (basePath: string) (spec: EventSpec) : string =
         Author = None
         Links = []
         Technical = None
+        CrossProjectIdea = None
     }
 
     let eventPath = EventWriter.writeEventFile basePath None meta narrative

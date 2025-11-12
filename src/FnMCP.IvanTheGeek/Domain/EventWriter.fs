@@ -53,6 +53,16 @@ module private Helpers =
             td.Context |> Option.iter (fun v -> append ($"  context: \"{yamlEscape v}\""))
             td.Consequences |> Option.iter (fun v -> append ($"  consequences: \"{yamlEscape v}\""))
         | _ -> ()
+        match meta.Type, meta.CrossProjectIdea with
+        | CrossProjectIdea, Some cpi ->
+            append "cross_project_idea:"
+            append ($"  source_project: {cpi.SourceProject}")
+            append ($"  target_project: {cpi.TargetProject}")
+            append ($"  idea: \"{yamlEscape cpi.Idea}\"")
+            append ($"  priority: {cpi.Priority.AsString}")
+            append ($"  status: {cpi.Status.AsString}")
+            cpi.ContextLink |> Option.iter (fun v -> append ($"  context_link: \"{yamlEscape v}\""))
+        | _ -> ()
         append "---"
         append ""
         if String.IsNullOrWhiteSpace(body) then () else append body
