@@ -238,6 +238,10 @@ module EventTools =
                 Staleness = None
                 ToolName = None
                 Success = None
+                Query = None
+                ResultCount = None
+                TopResultTitle = None
+                TopResultScore = None
             }
             EventWriter.writeSystemEvent basePath project systemEvent |> ignore
 
@@ -264,6 +268,10 @@ module EventTools =
                 Staleness = None
                 ToolName = None
                 Success = None
+                Query = None
+                ResultCount = None
+                TopResultTitle = None
+                TopResultScore = None
             }
             EventWriter.writeSystemEvent basePath None systemEvent |> ignore
 
@@ -328,6 +336,10 @@ module EventTools =
                 Staleness = None
                 ToolName = None
                 Success = None
+                Query = None
+                ResultCount = None
+                TopResultTitle = None
+                TopResultScore = None
             }
             EventWriter.writeSystemEvent basePath (Some targetProject) systemEvent |> ignore
 

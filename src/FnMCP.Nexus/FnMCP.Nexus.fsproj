@@ -40,10 +40,15 @@
         <Compile Include="Projections/Timeline.fs" />
         <Compile Include="Projections/PendingIdeas.fs" />
 
+        <!-- External services -->
+        <Compile Include="QdrantClient.fs" />
+        <Compile Include="EmbeddingService.fs" />
+
         <!-- Tools layer -->
         <Compile Include="Tools/EventTools.fs" />
         <Compile Include="Tools/EnhanceNexus.fs" />
         <Compile Include="Tools/Learning.fs" />
+        <Compile Include="Tools/SemanticSearch.fs" />
 
         <!-- Infrastructure -->
         <Compile Include="ContentProvider.fs" />

@@ -131,6 +131,10 @@ let private createEventFromSpec (basePath: string) (spec: EventSpec) : string =
         Staleness = None
         ToolName = None
         Success = None
+        Query = None
+        ResultCount = None
+        TopResultTitle = None
+        TopResultScore = None
     }
     EventWriter.writeSystemEvent basePath None systemEvent |> ignore
 
@@ -173,6 +177,10 @@ let enhanceNexus (basePath: string) (eventSpecs: EventSpec list) (projectionsToR
         Staleness = None
         ToolName = Some "enhance_nexus"
         Success = Some true
+        Query = None
+        ResultCount = None
+        TopResultTitle = None
+        TopResultScore = None
     }
     EventWriter.writeSystemEvent basePath None toolInvokedEvent |> ignore
 

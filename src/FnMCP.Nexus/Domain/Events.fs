@@ -163,6 +163,7 @@ type SystemEventType =
     | ProjectionRegenerated       // Projection was rebuilt
     | ProjectionQueried           // Projection was accessed
     | ToolInvoked                 // MCP tool was called
+    | SemanticSearchPerformed     // Semantic search query executed
 with
     member this.AsString =
         match this with
@@ -170,6 +171,7 @@ with
         | ProjectionRegenerated -> "ProjectionRegenerated"
         | ProjectionQueried -> "ProjectionQueried"
         | ToolInvoked -> "ToolInvoked"
+        | SemanticSearchPerformed -> "SemanticSearchPerformed"
 
     static member Parse(str: string) =
         match str.Trim() with
@@ -177,6 +179,7 @@ with
         | "ProjectionRegenerated" -> ProjectionRegenerated
         | "ProjectionQueried" -> ProjectionQueried
         | "ToolInvoked" -> ToolInvoked
+        | "SemanticSearchPerformed" -> SemanticSearchPerformed
         | other -> failwith ($"Unknown system event type: {other}")
 
 // System event metadata - YAML only, no markdown body
@@ -200,6 +203,12 @@ type SystemEventMeta = {
     // ToolInvoked fields
     ToolName: string option
     Success: bool option
+
+    // SemanticSearchPerformed fields
+    Query: string option
+    ResultCount: int option
+    TopResultTitle: string option
+    TopResultScore: float option
 }
 
 // ============================================================================

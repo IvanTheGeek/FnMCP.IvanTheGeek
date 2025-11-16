@@ -42,6 +42,7 @@ module ToolRegistry =
             Learning.recordLearningTool;
             Learning.lookupPatternTool;
             Learning.lookupErrorSolutionTool;
+            SemanticSearch.searchKnowledgeTool;
         ]
 
     // Tool execution handlers
@@ -129,6 +130,10 @@ module ToolRegistry =
                 | Error err -> Error err
             | "lookup_error_solution" ->
                 match Learning.handleLookupErrorSolution contextLibraryPath jsonElement with
+                | Ok txt -> Ok [ box {| ``type`` = "text"; text = txt |} ]
+                | Error err -> Error err
+            | "search_knowledge" ->
+                match SemanticSearch.handleSearchKnowledge contextLibraryPath jsonElement with
                 | Ok txt -> Ok [ box {| ``type`` = "text"; text = txt |} ]
                 | Error err -> Error err
             | _ -> Error $"Unknown tool: {name}"

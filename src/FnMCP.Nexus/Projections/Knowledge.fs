@@ -354,6 +354,10 @@ module KnowledgeWriter =
             Staleness = None
             ToolName = None
             Success = None
+            Query = None
+            ResultCount = None
+            TopResultTitle = None
+            TopResultScore = None
         }
         EventWriter.writeSystemEvent basePath None systemEvent |> ignore
 

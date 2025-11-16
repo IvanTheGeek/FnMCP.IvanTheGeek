@@ -105,6 +105,9 @@ module MetricsReader =
                 | Some (ProjectionQueried, _) ->
                     ()  // Not counted in current metrics
 
+                | Some (SemanticSearchPerformed, _) ->
+                    ()  // Not counted in current metrics
+
                 | None -> ()
 
             {
@@ -170,6 +173,10 @@ module MetricsWriter =
             Staleness = None
             ToolName = None
             Success = None
+            Query = None
+            ResultCount = None
+            TopResultTitle = None
+            TopResultScore = None
         }
         EventWriter.writeSystemEvent basePath None systemEvent |> ignore
 

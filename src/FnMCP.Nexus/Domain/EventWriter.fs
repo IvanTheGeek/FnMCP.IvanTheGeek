@@ -144,6 +144,12 @@ module SystemEventHelpers =
             meta.ToolName |> Option.iter (fun tn -> append ($"tool_name: {tn}"))
             meta.Success |> Option.iter (fun s -> append ($"success: {s}"))
 
+        | SemanticSearchPerformed ->
+            meta.Query |> Option.iter (fun q -> append ($"query: \"{Helpers.yamlEscape q}\""))
+            meta.ResultCount |> Option.iter (fun rc -> append ($"result_count: {rc}"))
+            meta.TopResultTitle |> Option.iter (fun trt -> append ($"top_result_title: \"{Helpers.yamlEscape trt}\""))
+            meta.TopResultScore |> Option.iter (fun trs -> append ($"top_result_score: {trs}"))
+
         b.ToString()
 
 open SystemEventHelpers
