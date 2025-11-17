@@ -173,6 +173,15 @@ let readNextMessage (sr: StreamReader) = async {
             return Some (sb.ToString())
 }
 
+// Write a response with Content-Length framing (LSP-style)
+let writeResponse (json: string) =
+    let bytes = Encoding.UTF8.GetBytes(json)
+    let contentLength = bytes.Length
+    Console.Write($"Content-Length: {contentLength}\r\n\r\n")
+    Console.Out.Flush()
+    Console.Out.Write(json)
+    Console.Out.Flush()
+
 // Run stdio transport
 let runStdioTransport (server: McpServer) : int =
     log "Starting stdio transport..."
@@ -188,8 +197,7 @@ let runStdioTransport (server: McpServer) : int =
             let! responseJsonOpt = processRequest server payload
             match responseJsonOpt with
             | Some json ->
-                Console.WriteLine(json)
-                Console.Out.Flush()
+                writeResponse json
             | None -> ()
             return! loop ()
     }

@@ -36,4 +36,4 @@ EXPOSE 18080
 ENV ASPNETCORE_URLS=http://+:18080
 
 # Run the application
-ENTRYPOINT ["./nexus"]
+ENTRYPOINT ["./FnMCP.Nexus"]
