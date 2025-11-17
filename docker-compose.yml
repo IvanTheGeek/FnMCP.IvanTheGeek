@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  nexus-mcp:
+    build:
+      context: .
+    container_name: nexus-mcp
+    environment:
+      - NEXUS_TRANSPORT=http
+      - NEXUS_MCP_PORT=18080
+      - CONTEXT_LIBRARY_PATH=/data/event-store
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - EMBEDDING_API_URL=http://embedding:5000/embed
+    volumes:
+      - /home/linux/Nexus-Data:/data/event-store:ro
+    networks:
+      - nexus-network
+    restart: unless-stopped
+    ports:
+      - "18080:18080"
+
+networks:
+  nexus-network:
+    external: true
