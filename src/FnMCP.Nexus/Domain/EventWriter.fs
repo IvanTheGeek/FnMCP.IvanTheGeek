@@ -240,3 +240,80 @@ let writeLearningEvent (basePath: string) (project: string option) (meta: Learni
     let content = toLearningYaml meta body
     File.WriteAllText(fullPath, content, Encoding.UTF8)
     fullPath
+
+// ============================================================================
+// PHASE 3.5: API Key Event Writing - YAML only (like system events)
+// ============================================================================
+
+module ApiKeyEventHelpers =
+    // API key events go to system/api-keys directory
+    let apiKeyEventDirectory (basePath: string) (project: string option) (dt: DateTime) =
+        match project with
+        | Some proj -> Path.Combine(basePath, "nexus", "events", proj, "system", "api-keys", Helpers.monthFolder dt)
+        | None -> Path.Combine(basePath, "nexus", "events", "system", "api-keys", Helpers.monthFolder dt)
+
+    // API key event filename: timestamp_EventType_KeyId_guid.yaml
+    let buildApiKeyFilename (etype: ApiKeyEventType) (keyId: Guid option) (dt: DateTime) =
+        let guid = System.Guid.NewGuid().ToString("N").Substring(0, 8)
+        let ts = Helpers.fileTimestamp dt
+        let et = etype.AsString
+        match keyId with
+        | Some kid ->
+            let keyIdShort = kid.ToString("N").Substring(0, 8)
+            $"{ts}_{et}_{keyIdShort}_{guid}.yaml"
+        | None ->
+            $"{ts}_{et}_{guid}.yaml"
+
+    // Convert API key event to pure YAML
+    let toApiKeyYaml (meta: ApiKeyEventMeta) =
+        let b = StringBuilder()
+        let append (s: string) = b.AppendLine(s) |> ignore
+
+        append "---"
+        append ($"id: {meta.Id}")
+        append ($"type: {meta.Type.AsString}")
+
+        // ISO 8601 timestamp
+        let occurred = meta.OccurredAt.ToString("yyyy-MM-dd'T'HH:mm:ss.fffK")
+        append ($"occurred_at: {occurred}")
+
+        // Conditional fields based on event type
+        match meta.Type with
+        | ApiKeyGenerated ->
+            meta.KeyId |> Option.iter (fun kid -> append ($"key_id: {kid}"))
+            meta.KeyHash |> Option.iter (fun kh -> append ($"key_hash: {kh}"))
+            meta.Scope |> Option.iter (fun s -> append ($"scope: \"{s.AsString}\""))
+            meta.Description |> Option.iter (fun d -> append ($"description: \"{Helpers.yamlEscape d}\""))
+            meta.ExpiresAt |> Option.iter (fun exp ->
+                let expStr = exp.ToString("yyyy-MM-dd'T'HH:mm:ss.fffK")
+                append ($"expires_at: {expStr}"))
+            meta.GeneratedBy |> Option.iter (fun gb -> append ($"generated_by: {gb}"))
+
+        | ApiKeyRevoked ->
+            meta.KeyId |> Option.iter (fun kid -> append ($"key_id: {kid}"))
+            meta.RevokedBy |> Option.iter (fun rb -> append ($"revoked_by: {rb}"))
+            meta.RevokedReason |> Option.iter (fun rr -> append ($"revoked_reason: \"{Helpers.yamlEscape rr}\""))
+
+        | ApiKeyUsed ->
+            meta.KeyId |> Option.iter (fun kid -> append ($"key_id: {kid}"))
+            meta.ClientIp |> Option.iter (fun ip -> append ($"client_ip: {ip}"))
+            meta.UserAgent |> Option.iter (fun ua -> append ($"user_agent: \"{Helpers.yamlEscape ua}\""))
+
+        | ApiKeyRejected ->
+            meta.ClientIp |> Option.iter (fun ip -> append ($"client_ip: {ip}"))
+            meta.UserAgent |> Option.iter (fun ua -> append ($"user_agent: \"{Helpers.yamlEscape ua}\""))
+            meta.RejectionReason |> Option.iter (fun rr -> append ($"rejection_reason: \"{Helpers.yamlEscape rr}\""))
+
+        b.ToString()
+
+open ApiKeyEventHelpers
+
+// Write API key event (YAML only, no body)
+let writeApiKeyEvent (basePath: string) (project: string option) (meta: ApiKeyEventMeta) : string =
+    let dir = apiKeyEventDirectory basePath project meta.OccurredAt
+    ensureDirectory dir
+    let filename = buildApiKeyFilename meta.Type meta.KeyId meta.OccurredAt
+    let fullPath = Path.Combine(dir, filename)
+    let yaml = toApiKeyYaml meta
+    File.WriteAllText(fullPath, yaml, Encoding.UTF8)
+    fullPath

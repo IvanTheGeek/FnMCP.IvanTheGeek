@@ -5,6 +5,8 @@ open System.IO
 open System.Text.Json
 open FnMCP.Nexus.Types
 open FnMCP.Nexus.Tools
+open FnMCP.Nexus.Auth.ApiKeyService
+open FnMCP.Nexus.Domain
 
 // Tool definitions for the MCP server
 module ToolRegistry =
@@ -43,6 +45,29 @@ module ToolRegistry =
             Learning.lookupPatternTool;
             Learning.lookupErrorSolutionTool;
             SemanticSearch.searchKnowledgeTool;
+            {
+                Name = "generate_api_key"
+                Description = Some "Generate a new API key for remote MCP access via HTTPS (SSE/WebSocket). Keys are stored securely as hashed events."
+                InputSchema = box {|
+                    ``type`` = "object"
+                    properties = {|
+                        scope = {|
+                            ``type`` = "string"
+                            description = "Access scope for the key"
+                            ``enum`` = [| "full_access"; "read_only"; "files_only_public" |]
+                        |}
+                        description = {|
+                            ``type`` = "string"
+                            description = "Human-readable description of this key's purpose (e.g., 'Claude Web access', 'Mobile app')"
+                        |}
+                        expires_in_days = {|
+                            ``type`` = "integer"
+                            description = "Optional: Number of days until key expires (omit for no expiration)"
+                        |}
+                    |}
+                    required = [| "scope"; "description" |]
+                |}
+            };
         ]
 
     // Tool execution handlers
@@ -136,4 +161,57 @@ module ToolRegistry =
                 match SemanticSearch.handleSearchKnowledge contextLibraryPath jsonElement with
                 | Ok txt -> Ok [ box {| ``type`` = "text"; text = txt |} ]
                 | Error err -> Error err
+            | "generate_api_key" ->
+                try
+                    // Parse arguments
+                    let scopeStr = jsonElement.GetProperty("scope").GetString()
+                    let description = jsonElement.GetProperty("description").GetString()
+
+                    let mutable expiresInDaysProp = Unchecked.defaultof<JsonElement>
+                    let expiresInDays =
+                        if jsonElement.TryGetProperty("expires_in_days", &expiresInDaysProp) then
+                            Some (expiresInDaysProp.GetInt32())
+                        else
+                            None
+
+                    // Parse scope
+                    let scope =
+                        match scopeStr with
+                        | "full_access" -> ApiKeyScope.FullAccess
+                        | "read_only" -> ApiKeyScope.ReadOnly
+                        | "files_only_public" -> ApiKeyScope.FilesOnly [SecurityClassification.Public]
+                        | _ -> ApiKeyScope.ReadOnly // Default to read-only for safety
+
+                    // Generate key
+                    let (key, keyId) = generateApiKey contextLibraryPath scope description expiresInDays "user"
+
+                    // Format response with prominent warning
+                    let expiryText =
+                        match expiresInDays with
+                        | Some days -> $" (expires in {days} days)"
+                        | None -> " (no expiration)"
+
+                    let message = $"""
+API Key Generated Successfully!
+================================
+
+⚠️  IMPORTANT: Save this key now - it will never be shown again!
+
+API Key: {key}
+Key ID: {keyId}
+Scope: {scopeStr}{expiryText}
+Description: {description}
+
+To use this key with Claude Web/Desktop/Mobile:
+1. Add to your MCP client configuration
+2. Use as: Authorization: Bearer {key}
+3. Connect to: https://mcp.nexus.ivanthegeek.com/sse/events
+
+Example curl test:
+curl -H "Authorization: Bearer {key}" https://mcp.nexus.ivanthegeek.com/health
+"""
+
+                    Ok [ box {| ``type`` = "text"; text = message |} ]
+                with
+                | ex -> Error $"Failed to generate API key: {ex.Message}"
             | _ -> Error $"Unknown tool: {name}"

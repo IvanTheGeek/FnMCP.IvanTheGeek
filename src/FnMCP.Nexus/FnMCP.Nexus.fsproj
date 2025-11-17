@@ -39,6 +39,12 @@
         <Compile Include="Projections/Knowledge.fs" />
         <Compile Include="Projections/Timeline.fs" />
         <Compile Include="Projections/PendingIdeas.fs" />
+        <Compile Include="Projections/ApiKeyProjection.fs" />
+
+        <!-- Auth layer (Phase 3) -->
+        <Compile Include="Auth/Cryptography.fs" />
+        <Compile Include="Auth/ApiKeyService.fs" />
+        <Compile Include="Auth/AuthMiddleware.fs" />
 
         <!-- External services -->
         <Compile Include="QdrantClient.fs" />
@@ -58,6 +64,14 @@
         <Compile Include="Prompts.fs" />
         <Compile Include="McpServer.fs" />
 
+        <!-- Transport layer (Phase 3) -->
+        <Compile Include="Transport/StdioTransport.fs" />
+        <Compile Include="Transport/SseTransport.fs" />
+        <Compile Include="Transport/WebSocketTransport.fs" />
+
+        <!-- HTTP server (Phase 3) -->
+        <Compile Include="Http/HttpServer.fs" />
+
         <!-- Entry point last -->
         <Compile Include="Program.fs" />
     </ItemGroup>
@@ -66,6 +80,9 @@
       <PackageReference Include="DotNetEnv" Version="3.1.1" />
       <PackageReference Include="Expecto" Version="10.2.3" />
       <PackageReference Include="System.Text.Json" Version="10.0.0-rc.2.25502.107" />
+
+      <!-- Phase 3: HTTP server and authentication -->
+      <PackageReference Include="Oxpecker" Version="0.20.0" />
     </ItemGroup>
 
     <!-- Ensure README and LICENSE are packed when creating a NuGet package -->

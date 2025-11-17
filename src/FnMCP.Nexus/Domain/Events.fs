@@ -310,3 +310,102 @@ type LearningEventMeta = {
     ConversationContext: string option // What we were building
     RelatedPatterns: string list      // Links to other patterns
 }
+
+// ============================================================================
+// PHASE 3.5: API Key Management Events - Secure remote access
+// ============================================================================
+
+// Security classification for file access control
+type SecurityClassification =
+    | Private    // Sensitive files (e.g., credentials, personal data)
+    | Licensed   // Licensed content (e.g., books, proprietary code)
+    | Public     // Public files (e.g., open-source, documentation)
+with
+    member this.AsString =
+        match this with
+        | Private -> "Private"
+        | Licensed -> "Licensed"
+        | Public -> "Public"
+
+    static member Parse(str: string) =
+        match str.Trim() with
+        | "Private" -> Private
+        | "Licensed" -> Licensed
+        | "Public" -> Public
+        | other -> failwith ($"Unknown security classification: {other}")
+
+// API key scope defines what operations are allowed
+type ApiKeyScope =
+    | FullAccess                                    // All tools and resources
+    | ReadOnly                                      // Read resources, no write operations
+    | FilesOnly of SecurityClassification list     // Access specific file classifications
+with
+    member this.AsString =
+        match this with
+        | FullAccess -> "FullAccess"
+        | ReadOnly -> "ReadOnly"
+        | FilesOnly classifications ->
+            let classStr = classifications |> List.map (fun c -> c.AsString) |> String.concat ","
+            $"FilesOnly({classStr})"
+
+    static member Parse(str: string) =
+        let trimmed = str.Trim()
+        if trimmed = "FullAccess" then
+            FullAccess
+        elif trimmed = "ReadOnly" then
+            ReadOnly
+        elif trimmed.StartsWith("FilesOnly(") && trimmed.EndsWith(")") then
+            let inner = trimmed.Substring(10, trimmed.Length - 11)
+            let classifications =
+                inner.Split(',')
+                |> Array.map (fun s -> SecurityClassification.Parse(s.Trim()))
+                |> Array.toList
+            FilesOnly classifications
+        else
+            failwith ($"Unknown API key scope: {str}")
+
+// API key event types
+type ApiKeyEventType =
+    | ApiKeyGenerated      // New API key created
+    | ApiKeyRevoked        // API key invalidated
+    | ApiKeyUsed           // API key successfully authenticated
+    | ApiKeyRejected       // API key authentication failed
+with
+    member this.AsString =
+        match this with
+        | ApiKeyGenerated -> "ApiKeyGenerated"
+        | ApiKeyRevoked -> "ApiKeyRevoked"
+        | ApiKeyUsed -> "ApiKeyUsed"
+        | ApiKeyRejected -> "ApiKeyRejected"
+
+    static member Parse(str: string) =
+        match str.Trim() with
+        | "ApiKeyGenerated" -> ApiKeyGenerated
+        | "ApiKeyRevoked" -> ApiKeyRevoked
+        | "ApiKeyUsed" -> ApiKeyUsed
+        | "ApiKeyRejected" -> ApiKeyRejected
+        | other -> failwith ($"Unknown API key event type: {other}")
+
+// API key event metadata - YAML only (no markdown body)
+type ApiKeyEventMeta = {
+    Id: Guid
+    Type: ApiKeyEventType
+    OccurredAt: DateTime
+
+    // ApiKeyGenerated fields
+    KeyId: Guid option
+    KeyHash: string option           // SHA256 hash of the key
+    Scope: ApiKeyScope option
+    Description: string option
+    ExpiresAt: DateTime option
+    GeneratedBy: string option
+
+    // ApiKeyRevoked fields
+    RevokedBy: string option
+    RevokedReason: string option
+
+    // ApiKeyUsed/ApiKeyRejected fields
+    ClientIp: string option
+    UserAgent: string option
+    RejectionReason: string option
+}
