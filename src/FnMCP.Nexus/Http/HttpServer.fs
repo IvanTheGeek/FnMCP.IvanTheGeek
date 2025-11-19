@@ -41,11 +41,11 @@ let configureApp (eventStorePath: string) (server: McpServer) (app: WebApplicati
 
     // SSE routes (auth required)
     let sseRoutes = [
-        // SSE event stream endpoint
+        // SSE stream endpoint for all MCP operations (tools, resources, prompts)
         GET [
-            route "/events" (requireApiKey eventStorePath >=> handleSseEndpoint server)
+            route "" (requireApiKey eventStorePath >=> handleSseEndpoint server)
         ]
-        // Message POST endpoint
+        // Message POST endpoint for client-to-server messages
         POST [
             route "/message" (requireApiKey eventStorePath >=> handleMessagePost server)
         ]
@@ -99,7 +99,7 @@ let startHttpServer (port: int) (eventStorePath: string) (server: McpServer) : A
 
         log $"HTTP server configured:"
         log $"  - Health check: http://0.0.0.0:{port}/"
-        log $"  - SSE endpoint: http://0.0.0.0:{port}/sse/events"
+        log $"  - SSE endpoint: http://0.0.0.0:{port}/sse"
         log $"  - SSE message: http://0.0.0.0:{port}/sse/message"
         log $"  - WebSocket: ws://0.0.0.0:{port}/ws"
         log $"All endpoints except health require Bearer token authentication"

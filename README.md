@@ -109,6 +109,56 @@ The server implements MCP protocol version `2024-11-05` using JSON-RPC 2.0:
 
 ## Status
 
-✅ **Currently Available for Junie**
+✅ **Production Deployment Active**
 
-The server is configured and ready to use with Junie. Resources from the context library can be accessed through the MCP protocol.
+The server is deployed on VPS and accessible via HTTP/SSE transport:
+- **Endpoint**: http://66.179.208.238:18080/sse
+- **Transport**: SSE (Server-Sent Events) with Bearer token authentication
+- **Status**: Operational since 2025-11-19
+
+Resources and tools from the context library can be accessed through the MCP protocol.
+
+## Remote Access
+
+### HTTP/SSE Transport (Recommended)
+
+The server supports remote access via HTTP with SSE transport:
+
+**Endpoints:**
+- Health: `http://66.179.208.238:18080/`
+- SSE Events: `http://66.179.208.238:18080/sse/events`
+- WebSocket: `ws://66.179.208.238:18080/ws`
+
+**Authentication:**
+All endpoints (except health check) require Bearer token authentication. Generate an API key:
+
+```bash
+docker exec -i nexus-mcp ./FnMCP.Nexus /data/event-store generate-api-key \
+  --scope full_access \
+  --description "Your description"
+```
+
+**Claude Desktop Configuration:**
+```json
+{
+  "mcpServers": {
+    "nexus-vps": {
+      "url": "http://66.179.208.238:18080/sse",
+      "transport": {
+        "type": "sse",
+        "headers": {
+          "Authorization": "Bearer YOUR_API_KEY_HERE"
+        }
+      }
+    }
+  }
+}
+```
+
+### Local stdio Transport (Development)
+
+For local development, you can also run the server in stdio mode:
+
+```bash
+./bin/local/FnMCP.Nexus /path/to/event-store
+```
