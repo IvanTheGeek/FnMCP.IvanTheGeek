@@ -44,11 +44,18 @@ let handleSseEndpoint (server: McpServer) : EndpointHandler =
             // For now, send a welcome message and keep alive
             use writer = new StreamWriter(ctx.Response.Body)
 
-            // Send initial event
+            // Construct full URL for message endpoint
+            let scheme = ctx.Request.Scheme
+            let host = ctx.Request.Host.ToUriComponent()
+            let messageEndpointUrl = $"{scheme}://{host}/sse/message"
+
+            // Send initial event with full URL
             do! writer.WriteLineAsync("event: endpoint")
-            do! writer.WriteLineAsync("data: /sse/message")
+            do! writer.WriteLineAsync($"data: {messageEndpointUrl}")
             do! writer.WriteLineAsync("")
             do! writer.FlushAsync()
+
+            log $"Sent endpoint URL: {messageEndpointUrl}"
 
             log "SSE welcome sent, keeping connection alive"
 
