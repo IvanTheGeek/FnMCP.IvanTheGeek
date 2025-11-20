@@ -150,7 +150,7 @@ let main argv =
                         Path.Combine(projectRoot, "context-library")
 
             log "FnMCP.Nexus MCP Server starting..."
-            log $"Protocol version: 2024-11-05"
+            log $"Protocol version: 2025-06-18"
             log $"Context library path: {contextLibraryPath}"
 
             if not (Directory.Exists(contextLibraryPath)) then

@@ -100,11 +100,22 @@ let handleMessagePost (server: McpServer) : EndpointHandler =
                 let response = server.CreateResponse(jsonRpcRequest.Id, result)
                 let responseJson = JsonSerializer.Serialize(response, jsonOptions)
 
+                log $"Sending response: {responseJson.Substring(0, min 500 responseJson.Length)}..."
+
+                // Generate session ID for initialize requests
+                if jsonRpcRequest.Method = "initialize" then
+                    let sessionId = System.Guid.NewGuid().ToString("N")
+                    ctx.Response.Headers.Add("Mcp-Session-Id", sessionId)
+                    log $"Generated session ID: {sessionId}"
+
                 ctx.Response.ContentType <- "application/json"
-                return! ctx |> text responseJson
+                do! ctx.Response.WriteAsync(responseJson)
+                return Some ctx
 
             with ex ->
                 log $"Error processing message: {ex.Message}"
                 ctx.Response.StatusCode <- 500
-                return! ctx |> text $"Internal server error: {ex.Message}"
+                ctx.Response.ContentType <- "text/plain"
+                do! ctx.Response.WriteAsync($"Internal server error: {ex.Message}")
+                return Some ctx
         }

@@ -82,7 +82,7 @@
       <PackageReference Include="System.Text.Json" Version="10.0.0-rc.2.25502.107" />
 
       <!-- Phase 3: HTTP server and authentication -->
-      <PackageReference Include="Oxpecker" Version="0.20.0" />
+      <PackageReference Include="Oxpecker" Version="1.0.0" />
     </ItemGroup>
 
     <!-- Ensure README and LICENSE are packed when creating a NuGet package -->
