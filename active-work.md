@@ -317,3 +317,136 @@ ssh root@66.179.208.238 "docker exec -i nexus-mcp ./FnMCP.Nexus /data/event-stor
 - Usage logging for security auditing
 - Revocation support built-in
 - Key expiration enforcement
+
+---
+
+## 2025-11-19: SSE Endpoint Fix Deployed - Production Updated
+
+### Status: ✅ DEPLOYED - SSE ENDPOINT UPDATED TO /sse
+
+### Completed by Code - Session 5 (Debug & Deploy)
+
+1. ✓ Identified SSE endpoint mismatch (VPS running old code with `/sse/events`)
+2. ✓ Diagnosed Docker BuildKit issues on local machine (builds hanging)
+3. ✓ Transferred source code to VPS via tar/scp
+4. ✓ Built Docker image directly on VPS (successful in 32 seconds)
+5. ✓ Deployed updated container with HTTP transport configuration
+6. ✓ Verified new `/sse` endpoint works correctly
+7. ✓ Confirmed old `/sse/events` endpoint returns 404
+
+### Root Cause Analysis
+
+**Issue:** VPS container was running old code with SSE endpoint at `/sse/events` instead of `/sse`
+
+**Evidence:**
+- Code was updated in commit `0742fb8` (Nov 18)
+- VPS container was never rebuilt after the code change
+- Old endpoint `/sse/events` worked, new `/sse` returned 404
+
+**Docker BuildKit Issue on Local Machine:**
+- Docker builds hung indefinitely during initial stages
+- BuildKit failed to progress beyond "load build definition"
+- Root cause: BuildKit incompatibility or corruption on local machine
+- Workaround: Build on VPS where Docker works correctly
+
+### Deployment Details
+
+**Build Method:**
+```bash
+# Transfer source
+tar czf /tmp/fnmcp-nexus-src.tar.gz --exclude='bin' --exclude='.git' ... -C /home/linux FnMCP.Nexus
+scp /tmp/fnmcp-nexus-src.tar.gz root@66.179.208.238:/tmp/
+ssh root@66.179.208.238 "cd /root && tar xzf /tmp/fnmcp-nexus-src.tar.gz"
+
+# Build on VPS
+ssh root@66.179.208.238 "cd /root/FnMCP.Nexus && docker build -t nexus-mcp:fixed ."
+```
+
+**Container Configuration:**
+```bash
+docker run -d --name nexus-mcp \
+  -v /data/event-store:/data/event-store \
+  -e NEXUS_TRANSPORT=http \
+  -e ASPNETCORE_URLS=http://+:18080 \
+  -p 18080:18080 \
+  --restart unless-stopped \
+  nexus-mcp:latest /data/event-store
+```
+
+### Verification Results
+
+**✅ New endpoint works:**
+```bash
+curl -H "Authorization: Bearer KEY" http://66.179.208.238:18080/sse
+# HTTP/1.1 200 OK
+# Content-Type: text/event-stream
+# [SSE stream established]
+```
+
+**✅ Old endpoint gone:**
+```bash
+curl -I http://66.179.208.238:18080/sse/events
+# HTTP/1.1 404 Not Found
+```
+
+**✅ Server logs confirm:**
+```
+[HttpServer] HTTP server configured:
+[HttpServer]   - Health check: http://0.0.0.0:18080/
+[HttpServer]   - SSE endpoint: http://0.0.0.0:18080/sse
+[HttpServer]   - SSE message: http://0.0.0.0:18080/sse/message
+[HttpServer]   - WebSocket: ws://0.0.0.0:18080/ws
+[SseTransport] SSE connection established
+[SseTransport] SSE welcome sent, keeping connection alive
+```
+
+### Claude Desktop Configuration
+
+**Current (correct) configuration:**
+```json
+{
+  "mcpServers": {
+    "nexus-vps": {
+      "url": "http://66.179.208.238:18080/sse",
+      "transport": {
+        "type": "sse",
+        "headers": {
+          "Authorization": "Bearer KvzmKD3aBYBmKY4pvOh/+NhwHBBxxiTeIKD2Kq/tAw4="
+        }
+      }
+    }
+  }
+}
+```
+
+### Next Steps
+
+1. **Restart Claude Desktop** to ensure it uses the correct endpoint
+2. **Fix Docker on local machine** to enable local builds
+   - Investigate BuildKit corruption
+   - Consider reinstalling Docker or resetting BuildKit state
+3. **Test MCP connection** from Claude Desktop
+4. **Monitor SSE performance** and connection stability
+
+### Files Modified
+
+- VPS: `/root/FnMCP.Nexus/` - Updated source code
+- VPS: Docker image `nexus-mcp:latest` - Rebuilt with latest code
+- VPS: Container `nexus-mcp` - Redeployed with HTTP transport
+- Local: `active-work.md` - This documentation
+
+### Technical Notes
+
+**Docker Build Performance:**
+- Local machine: BuildKit hangs indefinitely
+- VPS build: 32 seconds (successful)
+- Solution: Build on VPS until local Docker is fixed
+
+**Container Restart Issue:**
+- Initial deployment failed (container restarting)
+- Cause: Missing `NEXUS_TRANSPORT=http` environment variable
+- Fix: Added `-e NEXUS_TRANSPORT=http` to docker run command
+
+**SSE Endpoint Naming:**
+- Previous: `/sse/events` (misleading - handles all MCP operations)
+- Current: `/sse` (accurately represents SSE transport endpoint)
